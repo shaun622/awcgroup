@@ -15,9 +15,13 @@ import { SkeletonCard, SkeletonList } from '../components/ui/Skeleton'
 import AddPremisesModal from '../components/ui/AddPremisesModal'
 import { useClient } from '../hooks/useClients'
 import { usePremises } from '../hooks/usePremises'
+import { useJobs } from '../hooks/useJobs'
+import { useStaff } from '../hooks/useStaff'
 import { useDivision } from '../contexts/DivisionContext'
 import { DIVISION_SLUGS, getDivision } from '../lib/divisionRegistry'
-import { cn, formatDate, statusLabel, statusVariant } from '../lib/utils'
+import { cn, formatDate, formatTime, statusLabel, statusVariant, formatGBP } from '../lib/utils'
+import NewJobModal from '../components/ui/NewJobModal'
+import { CalendarClock } from 'lucide-react'
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: Building2 },
@@ -111,13 +115,7 @@ export default function ClientDetail() {
       {tab === 'overview' && <OverviewTab client={client} />}
       {tab === 'premises' && <PremisesTab client={client} />}
 
-      {tab === 'jobs' && (
-        <EmptyState
-          icon={Briefcase}
-          title="No jobs yet"
-          description="Create a job for this client from the Jobs page, or from a premises once added."
-        />
-      )}
+      {tab === 'jobs' && <JobsTab client={client} />}
 
       {tab === 'quotes' && (
         <EmptyState
@@ -283,6 +281,94 @@ function PremisesCard({ premises }) {
         </div>
       </div>
     </Card>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+
+function JobsTab({ client }) {
+  const navigate = useNavigate()
+  const { currentDivision, isGroupView } = useDivision()
+  const divisionSlug = isGroupView ? undefined : currentDivision?.slug
+  const { jobs, loading, createJob } = useJobs({ clientId: client.id, divisionSlug })
+  const { staff } = useStaff({ divisionSlug })
+  const staffById = useMemo(() => {
+    const m = new Map(); staff.forEach(s => m.set(s.id, s)); return m
+  }, [staff])
+  const [addOpen, setAddOpen] = useState(false)
+
+  if (loading) return <SkeletonList count={2} />
+
+  if (jobs.length === 0) {
+    return (
+      <>
+        <EmptyState
+          icon={Briefcase}
+          title="No jobs yet"
+          description={`Schedule a job for ${client.name}${currentDivision ? ` in ${currentDivision.name}` : ''}.`}
+          action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setAddOpen(true)}>Schedule job</Button>}
+        />
+        <NewJobModal
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          client={client}
+          createJob={createJob}
+          onCreated={j => navigate(`/jobs/${j.id}`)}
+        />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'}
+          {currentDivision && !isGroupView && <> · {currentDivision.name}</>}
+        </p>
+        <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setAddOpen(true)}>
+          Schedule job
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {jobs.map(job => (
+          <Card key={job.id} onClick={() => navigate(`/jobs/${job.id}`)}>
+            <div className="flex items-start gap-3">
+              <DivisionDot slug={job.division_slug} className="mt-2" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{job.title}</p>
+                  <Badge variant={statusVariant(job.status)} className="shrink-0">{statusLabel(job.status)}</Badge>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                  {job.scheduled_date && (
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarClock className="w-3 h-3" /> {formatDate(job.scheduled_date)} · {formatTime(job.scheduled_date)}
+                    </span>
+                  )}
+                  {job.price != null && <span className="tabular-nums">{formatGBP(job.price)}</span>}
+                  {staffById.get(job.assigned_staff_id) && (
+                    <span className="inline-flex items-center gap-1">
+                      <Avatar name={staffById.get(job.assigned_staff_id).name} size="xs" />
+                      {staffById.get(job.assigned_staff_id).name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <NewJobModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        client={client}
+        createJob={createJob}
+        onCreated={j => navigate(`/jobs/${j.id}`)}
+      />
+    </>
   )
 }
 
