@@ -4,7 +4,6 @@ import DivisionSwitcher from './DivisionSwitcher'
 import ThemeToggle from './ThemeToggle'
 import Avatar from '../ui/Avatar'
 import { useAuth } from '../../contexts/AuthContext'
-import { cn } from '../../lib/utils'
 
 export default function Header({ title, backTo, right, onOpenCommand }) {
   const navigate = useNavigate()
@@ -34,7 +33,7 @@ export default function Header({ title, backTo, right, onOpenCommand }) {
           </Link>
         )}
 
-        {/* Centre — division switcher */}
+        {/* Centre — division switcher (or page title when supplied) */}
         <div className="flex-1 flex justify-center min-w-0">
           {title ? (
             <h1 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{title}</h1>

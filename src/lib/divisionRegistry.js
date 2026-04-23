@@ -9,6 +9,7 @@ export const DIVISIONS = {
   pest: {
     slug: 'pest',
     name: 'Pest Control',
+    name_short: 'Pest',
     full_name: 'A Wilkinson Pest Control',
     abbrev: 'AWPC',
     tagline: 'Professional pest management',
@@ -32,6 +33,7 @@ export const DIVISIONS = {
   fire: {
     slug: 'fire',
     name: 'Fire Safety',
+    name_short: 'Fire',
     full_name: 'A Wilkinson Fire Safety',
     abbrev: 'AWFS',
     tagline: 'Compliance, assessments & servicing',
@@ -55,6 +57,7 @@ export const DIVISIONS = {
   hygiene: {
     slug: 'hygiene',
     name: 'Hygiene Services',
+    name_short: 'Hygiene',
     full_name: 'A Wilkinson Hygiene Services',
     abbrev: 'AWHS',
     tagline: 'Deep clean & sanitisation',
@@ -78,6 +81,7 @@ export const DIVISIONS = {
   locksmith: {
     slug: 'locksmith',
     name: 'Locksmith',
+    name_short: 'Locks',
     full_name: 'A Wilkinson Locksmith',
     abbrev: 'AWL',
     tagline: 'Security & access solutions',
@@ -102,6 +106,7 @@ export const DIVISIONS = {
   awc: {
     slug: 'awc',
     name: 'Group',
+    name_short: 'Group',
     full_name: 'A Wilkinson Company Ltd',
     abbrev: 'AWC',
     tagline: 'All divisions',
