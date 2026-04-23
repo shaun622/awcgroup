@@ -98,7 +98,20 @@ export function useQuotes({ clientId, divisionSlug, status } = {}) {
   }, [])
 
   const sendQuote = useCallback(async (id) => {
-    return updateQuote(id, { status: 'sent', sent_at: new Date().toISOString() })
+    // Fire-and-forget email — the edge function also flips the row to 'sent'.
+    // If the function isn't deployed yet we fall back to a direct status update
+    // so the UI still progresses.
+    try {
+      const res = await supabase.functions.invoke('send-quote', { body: { quote_id: id } })
+      if (res.error) throw res.error
+    } catch (err) {
+      console.warn('[send-quote] fell back to client-side status update:', err?.message ?? err)
+      return updateQuote(id, { status: 'sent', sent_at: new Date().toISOString() })
+    }
+    // Local refetch to pick up the row the function updated
+    const { data } = await supabase.from('quotes').select('*').eq('id', id).maybeSingle()
+    if (data) setQuotes(prev => prev.map(q => q.id === data.id ? data : q))
+    return data
   }, [updateQuote])
 
   const respondToQuote = useCallback(async (id, accept) => {

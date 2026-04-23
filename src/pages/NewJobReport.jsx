@@ -108,11 +108,18 @@ export default function NewJobReport() {
     setSubmitting(true)
     try {
       await updateReport({ report_data: reportData, notes })
-      await completeReport()
+      const saved = await completeReport()
       // Transition the job to completed if it isn't already
       if (job.status !== 'completed') {
         await updateJobStatus(job.id, 'completed')
       }
+      // Fire the email edge function. Non-blocking — if it's not deployed yet
+      // the report is still saved, just no email goes out.
+      supabase.functions.invoke('complete-job-report', { body: { job_report_id: saved?.id ?? report.id } })
+        .then(res => {
+          if (res.error) console.warn('[complete-job-report]', res.error)
+        })
+        .catch(err => console.warn('[complete-job-report]', err))
       toast.success('Job report submitted', { description: 'Job marked as completed.' })
       navigate(`/jobs/${job.id}`)
     } catch (err) {
