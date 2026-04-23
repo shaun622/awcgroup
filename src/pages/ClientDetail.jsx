@@ -1,16 +1,22 @@
-import { useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { ArrowLeft, Phone, Mail, MapPin, Edit3, Building2, Briefcase, Receipt, Activity, Plus } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import {
+  ArrowLeft, Phone, Mail, MapPin, Edit3, Building2, Briefcase, Receipt, Activity, Plus,
+  Clock, Repeat,
+} from 'lucide-react'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Avatar from '../components/ui/Avatar'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
-import { SkeletonCard } from '../components/ui/Skeleton'
+import DivisionChip, { DivisionDot } from '../components/ui/DivisionChip'
+import { SkeletonCard, SkeletonList } from '../components/ui/Skeleton'
+import AddPremisesModal from '../components/ui/AddPremisesModal'
 import { useClient } from '../hooks/useClients'
+import { usePremises } from '../hooks/usePremises'
 import { useDivision } from '../contexts/DivisionContext'
+import { DIVISION_SLUGS, getDivision } from '../lib/divisionRegistry'
 import { cn, formatDate, statusLabel, statusVariant } from '../lib/utils'
 
 const TABS = [
@@ -26,7 +32,6 @@ export default function ClientDetail() {
   const navigate = useNavigate()
   const { client, loading } = useClient(id)
   const [tab, setTab] = useState('overview')
-  const { currentDivision } = useDivision()
 
   if (loading) {
     return <PageWrapper size="xl"><SkeletonCard /></PageWrapper>
@@ -103,38 +108,8 @@ export default function ClientDetail() {
         })}
       </div>
 
-      {tab === 'overview' && (
-        <div className="space-y-4">
-          <Card className="!p-0 divide-y divide-gray-100 dark:divide-gray-800">
-            <DetailRow icon={<MapPin className="w-4 h-4" />} label="Address"
-              value={[client.address_line_1, client.address_line_2, client.city, client.postcode].filter(Boolean).join(', ') || '—'} />
-            <DetailRow icon={<Phone className="w-4 h-4" />} label="Phone" value={client.phone || '—'} />
-            <DetailRow icon={<Mail className="w-4 h-4" />} label="Email" value={client.email || '—'} />
-          </Card>
-
-          {client.notes && (
-            <Card>
-              <p className="section-title mb-2">Notes</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{client.notes}</p>
-            </Card>
-          )}
-
-          <div className="flex gap-2">
-            <Button variant="secondary" leftIcon={<Edit3 className="w-4 h-4" />}>Edit client</Button>
-          </div>
-        </div>
-      )}
-
-      {tab === 'premises' && (
-        <EmptyState
-          icon={MapPin}
-          title="No premises yet"
-          description={currentDivision
-            ? `Add a ${currentDivision.name.toLowerCase()} site for this client.`
-            : 'Add the first site for this client — division-tagged.'}
-          action={<Button leftIcon={<Plus className="w-4 h-4" />}>Add premises</Button>}
-        />
-      )}
+      {tab === 'overview' && <OverviewTab client={client} />}
+      {tab === 'premises' && <PremisesTab client={client} />}
 
       {tab === 'jobs' && (
         <EmptyState
@@ -162,6 +137,156 @@ export default function ClientDetail() {
     </PageWrapper>
   )
 }
+
+/* ──────────────────────────────────────────────────────────────────────── */
+
+function OverviewTab({ client }) {
+  return (
+    <div className="space-y-4">
+      <Card className="!p-0 divide-y divide-gray-100 dark:divide-gray-800">
+        <DetailRow icon={<MapPin className="w-4 h-4" />} label="Address"
+          value={[client.address_line_1, client.address_line_2, client.city, client.postcode].filter(Boolean).join(', ') || '—'} />
+        <DetailRow icon={<Phone className="w-4 h-4" />} label="Phone" value={client.phone || '—'} />
+        <DetailRow icon={<Mail className="w-4 h-4" />} label="Email" value={client.email || '—'} />
+      </Card>
+
+      {client.notes && (
+        <Card>
+          <p className="section-title mb-2">Notes</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{client.notes}</p>
+        </Card>
+      )}
+
+      <div className="flex gap-2">
+        <Button variant="secondary" leftIcon={<Edit3 className="w-4 h-4" />}>Edit client</Button>
+      </div>
+    </div>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+
+function PremisesTab({ client }) {
+  const { premises, loading, addPremises } = usePremises({ clientId: client.id })
+  const { currentDivision, isGroupView } = useDivision()
+  const [addOpen, setAddOpen] = useState(false)
+
+  // Scope: if a specific division is active, only show its premises.
+  // In Group view, show all divisions (grouped by division).
+  const filtered = useMemo(() => {
+    if (!currentDivision) return premises
+    return premises.filter(p => p.division_slug === currentDivision.slug)
+  }, [premises, currentDivision])
+
+  const groupedByDivision = useMemo(() => {
+    const groups = {}
+    for (const p of premises) {
+      (groups[p.division_slug] ||= []).push(p)
+    }
+    return groups
+  }, [premises])
+
+  if (loading) return <SkeletonList count={2} />
+
+  const shown = isGroupView ? premises : filtered
+
+  if (shown.length === 0) {
+    return (
+      <>
+        <EmptyState
+          icon={MapPin}
+          title="No premises yet"
+          description={
+            currentDivision
+              ? `Add a ${currentDivision.name.toLowerCase()} site for ${client.name}.`
+              : `Add the first site for ${client.name} — division-tagged.`
+          }
+          action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setAddOpen(true)}>Add premises</Button>}
+        />
+        <AddPremisesModal open={addOpen} onClose={() => setAddOpen(false)} client={client} addPremises={addPremises} />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {shown.length} {shown.length === 1 ? 'site' : 'sites'}
+          {currentDivision && !isGroupView && <> · {currentDivision.name}</>}
+        </p>
+        <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setAddOpen(true)}>
+          Add premises
+        </Button>
+      </div>
+
+      {isGroupView ? (
+        <div className="space-y-6">
+          {DIVISION_SLUGS.map(slug => {
+            const list = groupedByDivision[slug] ?? []
+            if (list.length === 0) return null
+            return (
+              <div key={slug}>
+                <div className="flex items-center gap-2 mb-2">
+                  <DivisionChip slug={slug} variant="soft" size="sm" />
+                  <span className="text-xs text-gray-500">{list.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {list.map(p => <PremisesCard key={p.id} premises={p} />)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {shown.map(p => <PremisesCard key={p.id} premises={p} />)}
+        </div>
+      )}
+
+      <AddPremisesModal open={addOpen} onClose={() => setAddOpen(false)} client={client} addPremises={addPremises} />
+    </>
+  )
+}
+
+function PremisesCard({ premises }) {
+  const addr = [premises.address_line_1, premises.address_line_2, premises.city, premises.postcode].filter(Boolean).join(', ')
+  const div = getDivision(premises.division_slug)
+  return (
+    <Card>
+      <div className="flex items-start gap-3">
+        <DivisionDot slug={premises.division_slug} className="mt-1.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              {premises.name && (
+                <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{premises.name}</p>
+              )}
+              <p className={cn('text-sm truncate', premises.name ? 'text-gray-500 dark:text-gray-400' : 'font-medium text-gray-900 dark:text-gray-100')}>
+                {addr || '—'}
+              </p>
+            </div>
+            {premises.regular_service && (
+              <Badge variant="primary" className="shrink-0">
+                <Repeat className="w-3 h-3" /> {statusLabel(premises.service_frequency)}
+              </Badge>
+            )}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+            <span className="inline-flex items-center gap-1">{statusLabel(premises.site_type)}</span>
+            {premises.next_due_at && (
+              <span className="inline-flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Next: {formatDate(premises.next_due_at)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
 
 function DetailRow({ icon, label, value }) {
   return (
