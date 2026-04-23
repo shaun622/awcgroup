@@ -14,19 +14,19 @@ export default function ThemeToggle({ compact }) {
   const haptic = useHaptic()
 
   if (compact) {
-    const idx = MODES.findIndex(m => m.value === mode)
-    const next = MODES[(idx + 1) % MODES.length]
-    const Icon = next.icon
+    // Compact toggle flips between light and dark only — simpler, predictable.
+    // (The three-way control with "System" lives in Settings.)
+    const isDark =
+      mode === 'dark' ||
+      (mode === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    const Icon = isDark ? Sun : Moon
     return (
       <button
-        onClick={() => { setMode(next.value); haptic.tap() }}
+        onClick={() => { setMode(isDark ? 'light' : 'dark'); haptic.tap() }}
         className="min-h-tap min-w-tap rounded-xl flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        aria-label={`Theme: ${mode}. Click to switch.`}
+        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       >
-        {(() => {
-          const Current = MODES.find(m => m.value === mode).icon
-          return <Current className="w-5 h-5" strokeWidth={2} />
-        })()}
+        <Icon className="w-5 h-5" strokeWidth={2} />
       </button>
     )
   }

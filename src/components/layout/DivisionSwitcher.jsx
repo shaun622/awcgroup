@@ -2,7 +2,6 @@ import { useDivision } from '../../contexts/DivisionContext'
 import { getDivision } from '../../lib/divisionRegistry'
 import { Building2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { toast } from 'sonner'
 
 /**
  * DivisionSwitcher — segmented control showing all enabled divisions + Group view.
@@ -29,12 +28,7 @@ export default function DivisionSwitcher({ includeGroup = true, className }) {
 
   const onSwitch = (slug) => {
     if (slug === active) return
-    const div = getDivision(slug)
     setActive(slug)
-    toast.success(`Switched to ${div.name}`, {
-      description: div.tagline,
-      duration: 1800,
-    })
   }
 
   return (

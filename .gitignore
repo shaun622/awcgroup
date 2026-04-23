@@ -29,6 +29,9 @@ build
 # Claude Code local config (machine-specific paths)
 .claude/
 
+# One-off bundled migration output
+supabase/migrations/_bundled.sql
+
 # OS
 .DS_Store
 Thumbs.db
