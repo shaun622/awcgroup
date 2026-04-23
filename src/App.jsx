@@ -16,6 +16,7 @@ import NewJobReport from './pages/NewJobReport'
 import Quotes from './pages/Quotes'
 import QuoteBuilder from './pages/QuoteBuilder'
 import PublicQuote from './pages/PublicQuote'
+import Portal from './pages/Portal'
 import Invoices from './pages/Invoices'
 import InvoiceBuilder from './pages/InvoiceBuilder'
 import Analytics from './pages/Analytics'
@@ -31,7 +32,8 @@ export default function App() {
     <Routes>
       <Route path="/login"  element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/quote/:token" element={<PublicQuote />} />
+      <Route path="/quote/:token"  element={<PublicQuote />} />
+      <Route path="/portal/:token" element={<Portal />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<BusinessGuard />}>
