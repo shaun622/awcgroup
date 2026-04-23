@@ -16,6 +16,7 @@ import AddPremisesModal from '../components/ui/AddPremisesModal'
 import { useClient } from '../hooks/useClients'
 import { usePremises } from '../hooks/usePremises'
 import { useJobs } from '../hooks/useJobs'
+import { useQuotes } from '../hooks/useQuotes'
 import { useStaff } from '../hooks/useStaff'
 import { useDivision } from '../contexts/DivisionContext'
 import { DIVISION_SLUGS, getDivision } from '../lib/divisionRegistry'
@@ -117,13 +118,7 @@ export default function ClientDetail() {
 
       {tab === 'jobs' && <JobsTab client={client} />}
 
-      {tab === 'quotes' && (
-        <EmptyState
-          icon={Receipt}
-          title="No quotes yet"
-          description="Draft a quote for this client — it'll show here, division-tagged."
-        />
-      )}
+      {tab === 'quotes' && <QuotesTab client={client} />}
 
       {tab === 'activity' && (
         <EmptyState
@@ -368,6 +363,63 @@ function JobsTab({ client }) {
         createJob={createJob}
         onCreated={j => navigate(`/jobs/${j.id}`)}
       />
+    </>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+
+function QuotesTab({ client }) {
+  const navigate = useNavigate()
+  const { currentDivision, isGroupView } = useDivision()
+  const divisionSlug = isGroupView ? undefined : currentDivision?.slug
+  const { quotes, loading } = useQuotes({ clientId: client.id, divisionSlug })
+
+  if (loading) return <SkeletonList count={2} />
+
+  if (quotes.length === 0) {
+    return (
+      <EmptyState
+        icon={Receipt}
+        title="No quotes yet"
+        description={`Draft a quote for ${client.name}.`}
+        action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => navigate(`/quotes/new?client=${client.id}`)}>New quote</Button>}
+      />
+    )
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {quotes.length} {quotes.length === 1 ? 'quote' : 'quotes'}
+          {currentDivision && !isGroupView && <> · {currentDivision.name}</>}
+        </p>
+        <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={() => navigate('/quotes/new')}>New quote</Button>
+      </div>
+
+      <div className="space-y-3">
+        {quotes.map(q => (
+          <Card key={q.id} onClick={() => navigate(`/quotes/${q.id}`)}>
+            <div className="flex items-start gap-3">
+              <DivisionDot slug={q.division_slug} className="mt-2" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{q.subject || q.quote_number}</p>
+                    <p className="text-xs text-gray-500 font-mono mt-0.5">{q.quote_number}</p>
+                  </div>
+                  <Badge variant={statusVariant(q.status)} className="shrink-0">{statusLabel(q.status)}</Badge>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                  <span className="tabular-nums font-semibold text-gray-900 dark:text-gray-100">{formatGBP(q.total)}</span>
+                  <span>{formatDate(q.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     </>
   )
 }
