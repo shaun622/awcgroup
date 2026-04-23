@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en-GB" class="theme-pest">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#16a34a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="AWC" />
+    <meta name="description" content="AWC Group — field operations for A Wilkinson Company" />
+    <title>AWC Group</title>
+    <script>
+      // Apply saved theme/division before React mounts (prevents FOUC)
+      (function () {
+        try {
+          var t = localStorage.getItem('awc:theme-mode');
+          if (t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+          }
+          var d = localStorage.getItem('awc:division');
+          if (d && ['pest','fire','hygiene','locksmith','awc'].includes(d)) {
+            document.documentElement.classList.remove('theme-pest','theme-fire','theme-hygiene','theme-locksmith','theme-awc');
+            document.documentElement.classList.add('theme-' + d);
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
