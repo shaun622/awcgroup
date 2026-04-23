@@ -20,6 +20,7 @@ import Invoices from './pages/Invoices'
 import InvoiceBuilder from './pages/InvoiceBuilder'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
+import Staff from './pages/Staff'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -48,7 +49,8 @@ export default function App() {
             <Route path="/invoices/new"   element={<InvoiceBuilder />} />
             <Route path="/invoices/:id"   element={<InvoiceBuilder />} />
             <Route path="/analytics"  element={<Analytics />} />
-            <Route path="/settings/*" element={<Settings />} />
+            <Route path="/settings"       element={<Settings />} />
+            <Route path="/settings/staff" element={<Staff />} />
           </Route>
         </Route>
       </Route>
