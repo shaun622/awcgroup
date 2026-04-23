@@ -12,6 +12,7 @@ import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
 import Jobs from './pages/Jobs'
 import JobDetail from './pages/JobDetail'
+import NewJobReport from './pages/NewJobReport'
 import Quotes from './pages/Quotes'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
@@ -33,7 +34,8 @@ export default function App() {
             <Route path="/clients"     element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/jobs"        element={<Jobs />} />
-            <Route path="/jobs/:id"    element={<JobDetail />} />
+            <Route path="/jobs/:id"         element={<JobDetail />} />
+            <Route path="/jobs/:id/report"  element={<NewJobReport />} />
             <Route path="/quotes"     element={<Quotes />} />
             <Route path="/analytics"  element={<Analytics />} />
             <Route path="/settings/*" element={<Settings />} />

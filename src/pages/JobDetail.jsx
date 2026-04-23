@@ -131,17 +131,25 @@ export default function JobDetail() {
           </Card>
         )}
 
-        {/* Future hook-in for item 4 (Job Reports) */}
-        {['in_progress', 'completed'].includes(job.status) && (
-          <Card className="opacity-60">
-            <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-gray-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Job report</p>
-                <p className="text-xs text-gray-500">Division-specific assessment form — coming soon.</p>
+        {['scheduled', 'in_progress', 'completed'].includes(job.status) && (
+          <Link to={`/jobs/${job.id}/report`} className="block">
+            <Card className="card-interactive">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5" strokeWidth={2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {job.status === 'completed' ? 'View / edit job report' : 'Complete with report'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Division-specific form, task checklist, photo uploads.
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
               </div>
-            </div>
-          </Card>
+            </Card>
+          </Link>
         )}
       </div>
     </PageWrapper>
