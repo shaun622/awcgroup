@@ -188,6 +188,22 @@ export default function QuoteBuilder() {
         )}
       </div>
 
+      {/* Once accepted, offer to raise an invoice */}
+      {quote?.status === 'accepted' && (
+        <Card className="mb-4 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900/50 flex items-center gap-3 !p-4">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">Quote accepted</p>
+            <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+              {quote.responded_at && `Accepted ${formatDate(quote.responded_at)}`}
+            </p>
+          </div>
+          <Button size="sm" onClick={() => navigate(`/invoices/new?from=quote:${quote.id}`)}>
+            Raise invoice
+          </Button>
+        </Card>
+      )}
+
       {/* Public link row (once sent) */}
       {quote && ['sent', 'viewed', 'accepted', 'declined'].includes(quote.status) && (
         <Card className="mb-4 !p-4">

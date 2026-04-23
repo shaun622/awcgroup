@@ -127,6 +127,9 @@ export default function JobDetail() {
                   {job.completed_at && `Finished ${formatDateTime(job.completed_at)}`}
                 </p>
               </div>
+              <Button size="sm" onClick={() => navigate(`/invoices/new?from=job:${job.id}`)}>
+                Invoice this job
+              </Button>
             </div>
           </Card>
         )}

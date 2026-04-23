@@ -16,6 +16,8 @@ import NewJobReport from './pages/NewJobReport'
 import Quotes from './pages/Quotes'
 import QuoteBuilder from './pages/QuoteBuilder'
 import PublicQuote from './pages/PublicQuote'
+import Invoices from './pages/Invoices'
+import InvoiceBuilder from './pages/InvoiceBuilder'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
@@ -42,6 +44,9 @@ export default function App() {
             <Route path="/quotes"        element={<Quotes />} />
             <Route path="/quotes/new"    element={<QuoteBuilder />} />
             <Route path="/quotes/:id"    element={<QuoteBuilder />} />
+            <Route path="/invoices"       element={<Invoices />} />
+            <Route path="/invoices/new"   element={<InvoiceBuilder />} />
+            <Route path="/invoices/:id"   element={<InvoiceBuilder />} />
             <Route path="/analytics"  element={<Analytics />} />
             <Route path="/settings/*" element={<Settings />} />
           </Route>
