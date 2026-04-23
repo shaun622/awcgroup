@@ -10,6 +10,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "build:icons": "node scripts/generate-icons.js",
+    "migrate": "node scripts/migrate.js",
     "lint": "echo \"lint not configured yet\""
   },
   "dependencies": {
@@ -37,6 +39,7 @@
     "autoprefixer": "^10.4.20",
     "pg": "^8.20.0",
     "postcss": "^8.4.49",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.16",
     "vite": "^6.0.0",
     "vite-plugin-pwa": "^0.21.0"
