@@ -10,6 +10,7 @@ import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonList } from '../components/ui/Skeleton'
 import { DivisionDot } from '../components/ui/DivisionChip'
+import FilterChips from '../components/ui/FilterChips'
 import NewJobModal from '../components/ui/NewJobModal'
 import { useSchedule } from '../hooks/useSchedule'
 import { useJobs } from '../hooks/useJobs'
@@ -51,30 +52,17 @@ export default function Schedule() {
         </Button>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-4 flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
-        {TABS.map(t => {
-          const active = tab === t.id
-          const count = t.id === 'today' ? totalToday : t.id === 'week' ? totalWeek : totalUpcoming
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={cn(
-                'shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-all min-h-[36px] flex items-center gap-1.5',
-                active
-                  ? 'bg-brand-500 text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-              )}
-            >
-              {t.label}
-              <span className={cn('inline-flex items-center justify-center rounded-full min-w-[18px] h-[18px] px-1 text-[10px] tabular-nums', active ? 'bg-white/25 text-white' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400')}>
-                {count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <FilterChips
+        className="mb-4"
+        options={TABS.map(t => ({
+          value: t.id,
+          label: t.label,
+          count: t.id === 'today' ? totalToday : t.id === 'week' ? totalWeek : totalUpcoming,
+        }))}
+        value={tab}
+        onChange={setTab}
+        ariaLabel="Schedule view"
+      />
 
       {/* Overdue always visible at the top */}
       {totalOverdue > 0 && (

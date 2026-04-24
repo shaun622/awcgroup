@@ -10,6 +10,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { SkeletonList } from '../components/ui/Skeleton'
 import DivisionChip, { DivisionDot } from '../components/ui/DivisionChip'
 import NewJobModal from '../components/ui/NewJobModal'
+import FilterChips from '../components/ui/FilterChips'
 import { useJobs } from '../hooks/useJobs'
 import { useClients } from '../hooks/useClients'
 import { usePremises } from '../hooks/usePremises'
@@ -17,7 +18,10 @@ import { useStaff } from '../hooks/useStaff'
 import { useDivision } from '../contexts/DivisionContext'
 import { cn, formatDate, formatTime, formatRelative, statusLabel, statusVariant, formatGBP, JOB_STATUSES } from '../lib/utils'
 
-const STATUS_FILTERS = ['all', ...JOB_STATUSES]
+const STATUS_FILTERS = [
+  { value: 'all', label: 'All' },
+  ...JOB_STATUSES.map(s => ({ value: s, label: statusLabel(s) })),
+]
 
 export default function Jobs() {
   const navigate = useNavigate()
@@ -58,26 +62,13 @@ export default function Jobs() {
         </Button>
       </div>
 
-      {/* Status filter chips */}
-      <div className="mb-4 flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
-        {STATUS_FILTERS.map(s => {
-          const active = statusFilter === s
-          return (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={cn(
-                'shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-all min-h-[36px]',
-                active
-                  ? 'bg-brand-500 text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-              )}
-            >
-              {s === 'all' ? 'All' : statusLabel(s)}
-            </button>
-          )
-        })}
-      </div>
+      <FilterChips
+        className="mb-4"
+        options={STATUS_FILTERS}
+        value={statusFilter}
+        onChange={setStatusFilter}
+        ariaLabel="Job status filter"
+      />
 
       {loading ? (
         <SkeletonList count={3} />

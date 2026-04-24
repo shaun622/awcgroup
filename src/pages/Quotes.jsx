@@ -8,12 +8,16 @@ import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonList } from '../components/ui/Skeleton'
 import { DivisionDot } from '../components/ui/DivisionChip'
+import FilterChips from '../components/ui/FilterChips'
 import { useQuotes } from '../hooks/useQuotes'
 import { useClients } from '../hooks/useClients'
 import { useDivision } from '../contexts/DivisionContext'
 import { cn, formatDate, formatGBP, statusLabel, statusVariant, QUOTE_STATUSES } from '../lib/utils'
 
-const FILTERS = ['all', ...QUOTE_STATUSES]
+const FILTERS = [
+  { value: 'all', label: 'All' },
+  ...QUOTE_STATUSES.map(s => ({ value: s, label: statusLabel(s) })),
+]
 
 export default function Quotes() {
   const navigate = useNavigate()
@@ -40,25 +44,13 @@ export default function Quotes() {
         </Button>
       </div>
 
-      <div className="mb-4 flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
-        {FILTERS.map(s => {
-          const active = filter === s
-          return (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              className={cn(
-                'shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-all min-h-[36px]',
-                active
-                  ? 'bg-brand-500 text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-              )}
-            >
-              {s === 'all' ? 'All' : statusLabel(s)}
-            </button>
-          )
-        })}
-      </div>
+      <FilterChips
+        className="mb-4"
+        options={FILTERS}
+        value={filter}
+        onChange={setFilter}
+        ariaLabel="Quote pipeline filter"
+      />
 
       {loading ? (
         <SkeletonList count={3} />
