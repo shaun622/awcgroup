@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
 
     if (recipients.length > 0) {
       await sendEmail({
-        from: Deno.env.get('RESEND_FROM_EMAIL') ?? 'noreply@awcgroup.co.uk',
+        from: Deno.env.get('RESEND_FROM_EMAIL') ?? 'noreply@awcgroup.uk',
         to: recipients,
         subject: `${biz?.name ?? 'AWC Group'} — ${brand.name} visit completed`,
         html,

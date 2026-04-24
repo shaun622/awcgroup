@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     if (!client?.email) return json({ error: 'client has no email' }, 400)
 
     const brand = divisionBrand(quote.division_slug)
-    const publicUrl = `${Deno.env.get('APP_URL') ?? 'https://app.awcgroup.co.uk'}/quote/${quote.public_token}`
+    const publicUrl = `${Deno.env.get('APP_URL') ?? 'https://app.awcgroup.uk'}/quote/${quote.public_token}`
 
     const lineRows = (quote.line_items ?? []).map((l: any) => `
       <tr>
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     `
 
     await sendEmail({
-      from: Deno.env.get('RESEND_FROM_EMAIL') ?? 'noreply@awcgroup.co.uk',
+      from: Deno.env.get('RESEND_FROM_EMAIL') ?? 'noreply@awcgroup.uk',
       to: client.email,
       subject: `${biz?.name ?? 'AWC Group'} — ${quote.subject || quote.quote_number}`,
       html,

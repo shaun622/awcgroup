@@ -1507,12 +1507,12 @@ QUOTE_STATUSES: ['draft','sent','viewed','follow_up','accepted','declined','expi
 VITE_SUPABASE_URL=https://ssnzebudcbrtpiwilroo.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
 VITE_APP_NAME=AWC Group
-VITE_SUPPORT_EMAIL=support@awcgroup.co.uk
+VITE_SUPPORT_EMAIL=support@awcgroup.uk
 
 # Edge function secrets (set in Supabase dashboard, not client)
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
 RESEND_API_KEY=re_UFYtdo1d_...
-RESEND_FROM_EMAIL=noreply@awcgroup.co.uk
+RESEND_FROM_EMAIL=noreply@awcgroup.uk
 ```
 
 Cloudflare Pages environment variables (production):
@@ -1607,7 +1607,7 @@ Cloudflare Pages environment variables (production):
 
 **Phase 7: Deploy (week 7)**
 32. Deploy Edge Functions (complete-job-report, send-quote, respond-to-quote, trigger-automation, portal-auth, update-job-status, send-reminder, generate-invoice-pdf)
-33. Configure Resend domain (awcgroup.co.uk) and templates
+33. Configure Resend domain (awcgroup.uk) and templates
 34. Deploy to Cloudflare Pages (connect GitHub repo, build `npm run build`, publish `dist`)
 35. Set Cloudflare Pages env vars (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
 36. Configure custom domain via Cloudflare DNS
@@ -1629,7 +1629,7 @@ Cloudflare Pages environment variables (production):
    - `VITE_APP_NAME`
    - `VITE_SUPPORT_EMAIL`
 7. Save & deploy. First build ~2 min.
-8. Custom domain: add via Pages → Custom domains → (e.g. `app.awcgroup.co.uk`) → CNAME auto-configured.
+8. Custom domain: add via Pages → Custom domains → (e.g. `app.awcgroup.uk`) → CNAME auto-configured.
 9. Add `_redirects` file in `public/` for SPA fallback:
    ```
    /*  /index.html  200

@@ -1,6 +1,6 @@
 # Deploying AWC App to Cloudflare Pages
 
-End-to-end steps to get the app live at e.g. `app.awcgroup.co.uk`. Expect
+End-to-end steps to get the app live at e.g. `app.awcgroup.uk`. Expect
 ≈10 minutes the first time; after that, every `git push` auto-deploys.
 
 ## 1 · Connect the repo
@@ -26,7 +26,7 @@ In the new project → **Settings → Environment variables**, add these to **Pr
 | `VITE_SUPABASE_URL` | `https://ssnzebudcbrtpiwilroo.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | the anon JWT from Supabase → Settings → API |
 | `VITE_APP_NAME` | `AWC Group` |
-| `VITE_SUPPORT_EMAIL` | `support@awcgroup.co.uk` |
+| `VITE_SUPPORT_EMAIL` | `support@awcgroup.uk` |
 
 **Do not** paste the service role key or the Resend key here — those are
 server-side only and live in the Supabase dashboard. See [§4](#4--edge-function-secrets).
@@ -36,14 +36,14 @@ Click **Save and deploy**. First build takes ~2 min.
 ## 3 · Custom domain
 
 Project → **Custom domains** → **Set up a custom domain** → e.g.
-`app.awcgroup.co.uk`. If the domain's DNS is already on Cloudflare (it
-is, since you bought awcgroup.co.uk there), Cloudflare sets up the CNAME
+`app.awcgroup.uk`. If the domain's DNS is already on Cloudflare (it
+is, since you bought awcgroup.uk there), Cloudflare sets up the CNAME
 for you automatically. Otherwise add the CNAME in your DNS provider.
 
 After the domain shows *Active*, go to **Supabase dashboard → Authentication → URL Configuration**:
 
-- **Site URL:** `https://app.awcgroup.co.uk`
-- **Additional Redirect URLs:** `https://app.awcgroup.co.uk/**`
+- **Site URL:** `https://app.awcgroup.uk`
+- **Additional Redirect URLs:** `https://app.awcgroup.uk/**`
 
 Without this step, email confirmation + password reset links still point
 at the preview `*.pages.dev` URL.
@@ -58,14 +58,14 @@ supabase link --project-ref ssnzebudcbrtpiwilroo
 
 supabase secrets set \
   RESEND_API_KEY="re_..." \
-  RESEND_FROM_EMAIL="noreply@awcgroup.co.uk" \
-  APP_URL="https://app.awcgroup.co.uk"
+  RESEND_FROM_EMAIL="noreply@awcgroup.uk" \
+  APP_URL="https://app.awcgroup.uk"
 
 supabase functions deploy send-quote
 supabase functions deploy complete-job-report
 ```
 
-Before Resend will send from `@awcgroup.co.uk`, verify the domain at
+Before Resend will send from `@awcgroup.uk`, verify the domain at
 [resend.com/domains](https://resend.com/domains) and paste the DNS
 records into Cloudflare. Until verified, set
 `RESEND_FROM_EMAIL=onboarding@resend.dev` for testing.

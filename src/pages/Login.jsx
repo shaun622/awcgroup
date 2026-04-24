@@ -53,7 +53,7 @@ export default function Login() {
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@awcgroup.co.uk"
+              placeholder="you@awcgroup.uk"
             />
             <Input
               label="Password"
