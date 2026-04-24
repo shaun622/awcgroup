@@ -6,7 +6,7 @@ import { cn } from '../../lib/utils'
  * Modal — bottom sheet on mobile, centred card on desktop.
  * Supports drag-to-dismiss on mobile. Scroll-locks <html> position-fixed style (iOS-safe).
  */
-export default function Modal({ open, onClose, title, description, headerAction, children, size = 'md', className }) {
+export default function Modal({ open, onClose, title, description, headerAction, children, size = 'md', className, zLayer = 50 }) {
   const scrollYRef = useRef(0)
   const panelRef = useRef(null)
   const [dragY, setDragY] = useState(0)
@@ -61,7 +61,13 @@ export default function Modal({ open, onClose, title, description, headerAction,
   }[size] ?? 'sm:max-w-lg'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in" role="dialog" aria-modal="true" aria-labelledby={title ? 'modal-title' : undefined}>
+    <div
+      className="fixed inset-0 flex items-end sm:items-center justify-center animate-fade-in"
+      style={{ zIndex: zLayer }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? 'modal-title' : undefined}
+    >
       <div className="fixed inset-0 bg-gray-900/40 dark:bg-black/60" onClick={onClose} aria-hidden />
       <div
         ref={panelRef}

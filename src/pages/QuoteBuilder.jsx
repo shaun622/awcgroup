@@ -11,11 +11,15 @@ import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Input, { Select, TextArea } from '../components/ui/Input'
 import DivisionChip from '../components/ui/DivisionChip'
+import AddClientModal from '../components/ui/AddClientModal'
+import AddPremisesModal from '../components/ui/AddPremisesModal'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import { useDivision } from '../contexts/DivisionContext'
 import { useClients } from '../hooks/useClients'
 import { usePremises } from '../hooks/usePremises'
 import { useQuote, useQuotes } from '../hooks/useQuotes'
+
+const ADD_SENTINEL = '__add__'
 import { calculateVAT, cn, formatDate, formatGBP, statusLabel, statusVariant } from '../lib/utils'
 
 const BLANK_LINE = { description: '', qty: 1, unit_price: 0 }
@@ -28,7 +32,9 @@ export default function QuoteBuilder() {
   const { quote, client: loadedClient, premises: loadedPremises, loading } = useQuote(id)
   const { createQuote, updateQuote, sendQuote, respondToQuote } = useQuotes()
   const { currentDivision, available } = useDivision()
-  const { allClients } = useClients()
+  const { allClients, addClient } = useClients()
+  const [addClientOpen, setAddClientOpen] = useState(false)
+  const [addPremisesOpen, setAddPremisesOpen] = useState(false)
 
   const [divisionSlug, setDivisionSlug] = useState(currentDivision?.slug ?? available[0]?.slug ?? 'pest')
   const [clientId, setClientId] = useState('')
@@ -55,7 +61,7 @@ export default function QuoteBuilder() {
     setExpiresAt(quote.expires_at ? quote.expires_at.slice(0, 10) : '')
   }, [quote?.id])
 
-  const { premises: clientPremises } = usePremises({
+  const { premises: clientPremises, addPremises } = usePremises({
     clientId: clientId || undefined,
     divisionSlug,
   })
@@ -249,25 +255,58 @@ export default function QuoteBuilder() {
         <Select
           label="Client"
           value={clientId}
-          onChange={e => { setClientId(e.target.value); setPremisesId('') }}
+          onChange={e => {
+            if (e.target.value === ADD_SENTINEL) { setAddClientOpen(true); return }
+            setClientId(e.target.value); setPremisesId('')
+          }}
           disabled={readOnly || !isNew}
           required
         >
           <option value="">— Pick a client —</option>
           {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {!readOnly && isNew && (<>
+            <option disabled>──────────</option>
+            <option value={ADD_SENTINEL}>+ Add new client…</option>
+          </>)}
         </Select>
 
         {clientId && (
-          <Select label="Premises (optional)" value={premisesId} onChange={e => setPremisesId(e.target.value)} disabled={readOnly}>
+          <Select
+            label="Premises (optional)"
+            value={premisesId}
+            onChange={e => {
+              if (e.target.value === ADD_SENTINEL) { setAddPremisesOpen(true); return }
+              setPremisesId(e.target.value)
+            }}
+            disabled={readOnly}
+          >
             <option value="">— No specific premises —</option>
             {clientPremises.map(p => (
               <option key={p.id} value={p.id}>
                 {p.name ? `${p.name} · ${p.address_line_1}` : p.address_line_1}
               </option>
             ))}
+            {!readOnly && (<>
+              <option disabled>──────────</option>
+              <option value={ADD_SENTINEL}>+ Add new premises…</option>
+            </>)}
           </Select>
         )}
       </div>
+
+      <AddClientModal
+        open={addClientOpen}
+        onClose={() => setAddClientOpen(false)}
+        addClient={addClient}
+        onCreated={(c) => { setClientId(c.id); setPremisesId(''); setAddClientOpen(false) }}
+      />
+      <AddPremisesModal
+        open={addPremisesOpen}
+        onClose={() => setAddPremisesOpen(false)}
+        client={allClients.find(c => c.id === clientId) || null}
+        addPremises={addPremises}
+        onCreated={(p) => { setPremisesId(p.id); setAddPremisesOpen(false) }}
+      />
 
       <div className="grid gap-3 mb-4 md:grid-cols-2">
         <Input label="Subject" value={subject} onChange={e => setSubject(e.target.value)} disabled={readOnly} placeholder="e.g. Monthly pest management" />

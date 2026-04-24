@@ -22,7 +22,7 @@ const emptyForm = {
  * AddClientModal — receives `addClient` as prop so it doesn't spin up its own
  * useClients subscription (which would race against the owning page).
  */
-export default function AddClientModal({ open, onClose, addClient, onCreated }) {
+export default function AddClientModal({ open, onClose, addClient, onCreated, zLayer }) {
   const navigate = useNavigate()
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
@@ -59,7 +59,7 @@ export default function AddClientModal({ open, onClose, addClient, onCreated }) 
   }
 
   return (
-    <Modal open={open} onClose={() => { reset(); onClose?.() }} title="Add client" description="You can add premises and jobs on the next screen." size="md">
+    <Modal open={open} onClose={() => { reset(); onClose?.() }} title="Add client" description="You can add premises and jobs on the next screen." size="md" zLayer={zLayer}>
       <form onSubmit={submit} className="space-y-4">
         <Input label="Full name or business name" required autoFocus value={form.name} onChange={e => update('name', e.target.value)} error={errors.name} placeholder="e.g. Riverside Café Ltd" />
 

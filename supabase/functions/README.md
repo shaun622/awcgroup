@@ -22,8 +22,8 @@ supabase link --project-ref ssnzebudcbrtpiwilroo
 # Set the secrets the functions rely on (one-time)
 supabase secrets set \
   RESEND_API_KEY="re_..." \
-  RESEND_FROM_EMAIL="noreply@awcgroup.co.uk" \
-  APP_URL="https://app.awcgroup.co.uk"
+  RESEND_FROM_EMAIL="noreply@awcgroup.uk" \
+  APP_URL="https://app.awcgroup.uk"
 
 # Deploy
 supabase functions deploy send-quote
@@ -35,7 +35,7 @@ Supabase runtime — don't override them.
 
 ## Verifying a domain in Resend
 
-Before `RESEND_FROM_EMAIL` can send from `@awcgroup.co.uk`, add the domain
+Before `RESEND_FROM_EMAIL` can send from `@awcgroup.uk`, add the domain
 in [Resend dashboard → Domains](https://resend.com/domains) and paste the
 DNS records into Cloudflare. Until then, use Resend's shared domain
 (`onboarding@resend.dev`) for testing.

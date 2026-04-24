@@ -10,9 +10,12 @@ import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Input, { Select, TextArea } from '../components/ui/Input'
 import DivisionChip from '../components/ui/DivisionChip'
+import AddClientModal from '../components/ui/AddClientModal'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import { useInvoice, useInvoices } from '../hooks/useInvoices'
 import { useClients } from '../hooks/useClients'
+
+const ADD_SENTINEL = '__add__'
 import { useBusiness } from '../contexts/BusinessContext'
 import { supabase } from '../lib/supabase'
 import { calculateVAT, cn, formatDate, formatGBP, statusLabel, statusVariant } from '../lib/utils'
@@ -28,7 +31,8 @@ export default function InvoiceBuilder() {
   const { business } = useBusiness()
   const { invoice, client: loadedClient, loading } = useInvoice(id)
   const { createInvoice, updateInvoice, sendInvoice, markPaid } = useInvoices()
-  const { allClients } = useClients()
+  const { allClients, addClient } = useClients()
+  const [addClientOpen, setAddClientOpen] = useState(false)
 
   const [clientId, setClientId] = useState('')
   const [divisionSlug, setDivisionSlug] = useState('')
@@ -195,9 +199,22 @@ export default function InvoiceBuilder() {
       </div>
 
       <div className="grid gap-3 mb-4 md:grid-cols-2">
-        <Select label="Client" value={clientId} onChange={e => setClientId(e.target.value)} disabled={readOnly || !isNew} required>
+        <Select
+          label="Client"
+          value={clientId}
+          onChange={e => {
+            if (e.target.value === ADD_SENTINEL) { setAddClientOpen(true); return }
+            setClientId(e.target.value)
+          }}
+          disabled={readOnly || !isNew}
+          required
+        >
           <option value="">— Pick a client —</option>
           {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {!readOnly && isNew && (<>
+            <option disabled>──────────</option>
+            <option value={ADD_SENTINEL}>+ Add new client…</option>
+          </>)}
         </Select>
 
         <Input label="Issue date" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} disabled={readOnly} />
@@ -254,6 +271,13 @@ export default function InvoiceBuilder() {
           </Button>
         </div>
       )}
+
+      <AddClientModal
+        open={addClientOpen}
+        onClose={() => setAddClientOpen(false)}
+        addClient={addClient}
+        onCreated={(c) => { setClientId(c.id); setAddClientOpen(false) }}
+      />
     </PageWrapper>
   )
 }

@@ -31,6 +31,7 @@ export default function AddPremisesModal({
   client,
   addPremises,
   onCreated,
+  zLayer,
 }) {
   const { currentDivision, available } = useDivision()
   // Default to active division if not Group view, else first available
@@ -87,7 +88,7 @@ export default function AddPremisesModal({
   }
 
   return (
-    <Modal open={open} onClose={() => { reset(); onClose?.() }} title="Add premises" description={`For ${client?.name ?? 'client'}`} size="md">
+    <Modal open={open} onClose={() => { reset(); onClose?.() }} title="Add premises" description={`For ${client?.name ?? 'client'}`} size="md" zLayer={zLayer}>
       <form onSubmit={submit} className="space-y-4">
         {/* Division selector */}
         <div className="space-y-1.5">

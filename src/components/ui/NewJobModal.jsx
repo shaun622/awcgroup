@@ -4,6 +4,9 @@ import Modal from './Modal'
 import Input, { Select, TextArea } from './Input'
 import Button from './Button'
 import Avatar from './Avatar'
+import AddClientModal from './AddClientModal'
+import AddPremisesModal from './AddPremisesModal'
+import AddJobTypeTemplateModal from './AddJobTypeTemplateModal'
 import { useDivision } from '../../contexts/DivisionContext'
 import { useClients } from '../../hooks/useClients'
 import { usePremises } from '../../hooks/usePremises'
@@ -11,6 +14,8 @@ import { useJobTypeTemplates } from '../../hooks/useJobTypeTemplates'
 import { useStaff } from '../../hooks/useStaff'
 import { getDivision } from '../../lib/divisionRegistry'
 import { cn } from '../../lib/utils'
+
+const ADD_SENTINEL = '__add__'
 
 /**
  * NewJobModal — create a job.
@@ -56,13 +61,18 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
     setScheduledTime('09:00')
   }, [open, lockedClient?.id, lockedPremises?.id, currentDivision?.slug, available])
 
-  const { allClients } = useClients()
-  const { premises: clientPremises } = usePremises({
+  const { allClients, addClient } = useClients()
+  const { premises: clientPremises, addPremises } = usePremises({
     clientId: clientId || undefined,
     divisionSlug,
   })
-  const { templates } = useJobTypeTemplates(divisionSlug)
+  const { templates, createTemplate } = useJobTypeTemplates(divisionSlug)
   const { staff } = useStaff({ divisionSlug })
+
+  // Inline-add modals triggered by the __add__ sentinel on each picker
+  const [addClientOpen, setAddClientOpen] = useState(false)
+  const [addPremisesOpen, setAddPremisesOpen] = useState(false)
+  const [addJobTypeOpen, setAddJobTypeOpen] = useState(false)
 
   // Narrow client list if divisions ever become client-scoped; for now they're shared
   const clientOptions = useMemo(() => allClients ?? [], [allClients])
@@ -165,9 +175,20 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
             </div>
           </div>
         ) : (
-          <Select label="Client" value={clientId} onChange={e => setClientId(e.target.value)} error={errors.clientId} required>
+          <Select
+            label="Client"
+            value={clientId}
+            onChange={e => {
+              if (e.target.value === ADD_SENTINEL) { setAddClientOpen(true); return }
+              setClientId(e.target.value)
+            }}
+            error={errors.clientId}
+            required
+          >
             <option value="">— Pick a client —</option>
             {clientOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option disabled>──────────</option>
+            <option value={ADD_SENTINEL}>+ Add new client…</option>
           </Select>
         )}
 
@@ -176,7 +197,10 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
           <Select
             label="Premises (optional)"
             value={premisesId}
-            onChange={e => setPremisesId(e.target.value)}
+            onChange={e => {
+              if (e.target.value === ADD_SENTINEL) { setAddPremisesOpen(true); return }
+              setPremisesId(e.target.value)
+            }}
             hint={clientPremises.length === 0 ? 'No premises for this client in this division yet.' : undefined}
           >
             <option value="">— No specific premises —</option>
@@ -186,6 +210,8 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
                 {p.postcode ? ` (${p.postcode})` : ''}
               </option>
             ))}
+            <option disabled>──────────</option>
+            <option value={ADD_SENTINEL}>+ Add new premises…</option>
           </Select>
         )}
         {lockedPremises && (
@@ -202,8 +228,11 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
         <Select
           label="Job type"
           value={templateId}
-          onChange={e => setTemplateId(e.target.value)}
-          hint={templates.length === 0 ? 'No templates in this division yet.' : 'Picking a template pre-fills title, duration and price.'}
+          onChange={e => {
+            if (e.target.value === ADD_SENTINEL) { setAddJobTypeOpen(true); return }
+            setTemplateId(e.target.value)
+          }}
+          hint={templates.length === 0 ? 'No templates in this division yet — add one inline.' : 'Picking a template pre-fills title, duration and price.'}
         >
           <option value="">— None —</option>
           {templates.map(t => (
@@ -211,6 +240,8 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
               {t.name}{t.default_price ? ` · £${Number(t.default_price).toFixed(0)}` : ''}
             </option>
           ))}
+          <option disabled>──────────</option>
+          <option value={ADD_SENTINEL}>+ Add new job type…</option>
         </Select>
 
         <Input
@@ -275,6 +306,30 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
           <Button type="submit" loading={saving} className="flex-1">Schedule job</Button>
         </div>
       </form>
+
+      {/* Nested add-X modals. zLayer 60 so they sit above the parent (z 50). */}
+      <AddClientModal
+        open={addClientOpen}
+        onClose={() => setAddClientOpen(false)}
+        addClient={addClient}
+        onCreated={(c) => { setClientId(c.id); setAddClientOpen(false) }}
+        zLayer={60}
+      />
+      <AddPremisesModal
+        open={addPremisesOpen}
+        onClose={() => setAddPremisesOpen(false)}
+        client={allClients.find(c => c.id === clientId) || null}
+        addPremises={addPremises}
+        onCreated={(p) => { setPremisesId(p.id); setAddPremisesOpen(false) }}
+        zLayer={60}
+      />
+      <AddJobTypeTemplateModal
+        open={addJobTypeOpen}
+        onClose={() => setAddJobTypeOpen(false)}
+        createTemplate={createTemplate}
+        onCreated={(t) => { setTemplateId(t.id); setAddJobTypeOpen(false) }}
+        zLayer={60}
+      />
     </Modal>
   )
 }

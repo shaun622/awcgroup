@@ -42,7 +42,7 @@ Only `VITE_*` variables are bundled into the client. Server-side secrets (servic
 VITE_SUPABASE_URL=https://ssnzebudcbrtpiwilroo.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
 VITE_APP_NAME=AWC Group
-VITE_SUPPORT_EMAIL=support@awcgroup.co.uk
+VITE_SUPPORT_EMAIL=support@awcgroup.uk
 ```
 
 ## Deployment — Cloudflare Pages
@@ -61,7 +61,7 @@ VITE_SUPPORT_EMAIL=support@awcgroup.co.uk
    - `VITE_APP_NAME`
    - `VITE_SUPPORT_EMAIL`
 6. Save & deploy. First build ≈ 2 min.
-7. Add your custom domain under **Pages → Custom domains** (e.g. `app.awcgroup.co.uk`).
+7. Add your custom domain under **Pages → Custom domains** (e.g. `app.awcgroup.uk`).
 8. **Important:** `public/_redirects` handles SPA fallback — do not delete.
 
 ### After first deploy
@@ -71,7 +71,7 @@ In the Supabase dashboard:
 - Add the production domain to **Auth → URL Configuration → Site URL** and to **Additional Redirect URLs**
 - Set edge-function secrets via CLI or dashboard:
   ```
-  supabase secrets set RESEND_API_KEY=re_... RESEND_FROM_EMAIL=noreply@awcgroup.co.uk
+  supabase secrets set RESEND_API_KEY=re_... RESEND_FROM_EMAIL=noreply@awcgroup.uk
   ```
 
 ## Project structure
