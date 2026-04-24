@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBusiness } from '../contexts/BusinessContext'
+import { logActivity } from '../lib/activity'
 
 /**
  * useInvoices — list + filter + mutate invoices for the current business.
@@ -104,8 +105,21 @@ export function useInvoices({ clientId, divisionSlug, status } = {}) {
   const sendInvoice = useCallback(async (id) =>
     updateInvoice(id, { status: 'sent', sent_at: new Date().toISOString() }), [updateInvoice])
 
-  const markPaid = useCallback(async (id, reference) =>
-    updateInvoice(id, { status: 'paid', paid_at: new Date().toISOString(), payment_reference: reference ?? null }), [updateInvoice])
+  const markPaid = useCallback(async (id, reference) => {
+    const data = await updateInvoice(id, { status: 'paid', paid_at: new Date().toISOString(), payment_reference: reference ?? null })
+    if (business) {
+      logActivity({
+        business_id: business.id,
+        division_slug: data.division_slug,
+        event_type: 'invoice_paid',
+        title: `Invoice paid: ${data.invoice_number}`,
+        subtitle: data.total ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(data.total)) : null,
+        entity_type: 'invoice',
+        entity_id: data.id,
+      })
+    }
+    return data
+  }, [updateInvoice, business])
 
   return { invoices, loading, refetch, createInvoice, updateInvoice, sendInvoice, markPaid }
 }

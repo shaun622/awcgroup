@@ -18,6 +18,8 @@ export function useDashboardStats({ divisionSlug } = {}) {
     overduePremises: 0,
     revenueMTD: 0,
     clientCount: 0,
+    scheduledToday: 0,
+    completedToday: 0,
   })
   const [loading, setLoading] = useState(true)
 
@@ -28,9 +30,11 @@ export function useDashboardStats({ divisionSlug } = {}) {
     const nowIso = new Date().toISOString()
     const weekStart = startOfWeek().toISOString()
     const monthStart = startOfMonth().toISOString()
+    const todayStart = startOfDay().toISOString()
+    const tomorrowStart = addDays(startOfDay(), 1).toISOString()
     const applyDiv = (q) => divisionSlug ? q.eq('division_slug', divisionSlug) : q
 
-    const [jobsThisWeek, activeJobs, pendingQuotes, overduePremises, revenue, clientCount] = await Promise.all([
+    const [jobsThisWeek, activeJobs, pendingQuotes, overduePremises, revenue, clientCount, scheduledToday, completedToday] = await Promise.all([
       applyDiv(supabase.from('jobs').select('*', { count: 'exact', head: true })
         .eq('business_id', business.id)
         .gte('scheduled_date', weekStart)
@@ -52,6 +56,16 @@ export function useDashboardStats({ divisionSlug } = {}) {
       // Clients aren't division-scoped
       supabase.from('clients').select('*', { count: 'exact', head: true })
         .eq('business_id', business.id),
+      applyDiv(supabase.from('jobs').select('*', { count: 'exact', head: true })
+        .eq('business_id', business.id)
+        .in('status', ['scheduled', 'in_progress'])
+        .gte('scheduled_date', todayStart)
+        .lt('scheduled_date', tomorrowStart)),
+      applyDiv(supabase.from('jobs').select('*', { count: 'exact', head: true })
+        .eq('business_id', business.id)
+        .eq('status', 'completed')
+        .gte('completed_at', todayStart)
+        .lt('completed_at', tomorrowStart)),
     ])
 
     const revenueMTD = (revenue.data ?? []).reduce((acc, r) => acc + (Number(r.price) || 0), 0)
@@ -63,6 +77,8 @@ export function useDashboardStats({ divisionSlug } = {}) {
       overduePremises: overduePremises.count ?? 0,
       revenueMTD,
       clientCount: clientCount.count ?? 0,
+      scheduledToday: scheduledToday.count ?? 0,
+      completedToday: completedToday.count ?? 0,
     })
     setLoading(false)
   }, [business, divisionSlug])
@@ -82,6 +98,10 @@ function startOfWeek(d = new Date()) {
 
 function startOfMonth(d = new Date()) {
   return new Date(d.getFullYear(), d.getMonth(), 1)
+}
+
+function startOfDay(d = new Date()) {
+  const x = new Date(d); x.setHours(0, 0, 0, 0); return x
 }
 
 function addDays(d, n) {

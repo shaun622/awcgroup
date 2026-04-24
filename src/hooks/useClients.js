@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBusiness } from '../contexts/BusinessContext'
+import { logActivity } from '../lib/activity'
 
 /**
  * useClients — load + search + mutate clients for the current business.
@@ -93,6 +94,14 @@ export function useClients({ search = '' } = {}) {
     if (error) throw error
     // Optimistic merge in case realtime lags
     setClients(prev => (prev.some(c => c.id === data.id) ? prev : [data, ...prev]))
+    logActivity({
+      business_id: business.id,
+      event_type: 'client_added',
+      title: `New client: ${data.name}`,
+      subtitle: data.email || data.city || null,
+      entity_type: 'client',
+      entity_id: data.id,
+    })
     return data
   }, [business])
 

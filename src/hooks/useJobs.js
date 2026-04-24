@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBusiness } from '../contexts/BusinessContext'
+import { logActivity } from '../lib/activity'
 
 /**
  * useJobs — load + filter + mutate jobs for the current business.
@@ -87,6 +88,15 @@ export function useJobs({ clientId, premisesId, divisionSlug, status } = {}) {
     const { data, error } = await supabase.from('jobs').insert(row).select().single()
     if (error) throw error
     setJobs(prev => (prev.some(j => j.id === data.id) ? prev : [data, ...prev].sort(byScheduledDateDesc)))
+    logActivity({
+      business_id: business.id,
+      division_slug: data.division_slug,
+      event_type: 'job_created',
+      title: `Job scheduled: ${data.title}`,
+      subtitle: data.scheduled_date ? new Date(data.scheduled_date).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'No date set',
+      entity_type: 'job',
+      entity_id: data.id,
+    })
     return data
   }, [business])
 
@@ -112,8 +122,18 @@ export function useJobs({ clientId, premisesId, divisionSlug, status } = {}) {
     const { data, error } = await supabase.from('jobs').update(patch).eq('id', jobId).select().single()
     if (error) throw error
     setJobs(prev => prev.map(j => j.id === data.id ? data : j))
+    if (nextStatus === 'completed' && business) {
+      logActivity({
+        business_id: business.id,
+        division_slug: data.division_slug,
+        event_type: 'job_completed',
+        title: `Job completed: ${data.title}`,
+        entity_type: 'job',
+        entity_id: data.id,
+      })
+    }
     return data
-  }, [])
+  }, [business])
 
   return { jobs, loading, error, refetch, createJob, updateJob, updateJobStatus, deleteJob }
 }

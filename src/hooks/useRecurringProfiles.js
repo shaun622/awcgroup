@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBusiness } from '../contexts/BusinessContext'
+import { logActivity } from '../lib/activity'
 
 /**
  * useRecurringProfiles — load + mutate recurring maintenance profiles.
@@ -66,6 +67,15 @@ export function useRecurringProfiles({ clientId, premisesId, divisionSlug, statu
     const { data, error } = await supabase.from('recurring_profiles').insert(row).select().single()
     if (error) throw error
     setProfiles(prev => [data, ...prev])
+    logActivity({
+      business_id: business.id,
+      division_slug: data.division_slug,
+      event_type: 'recurring_created',
+      title: `Recurring set up: ${data.title}`,
+      subtitle: data.frequency ? `${data.frequency} from ${data.start_date}` : null,
+      entity_type: 'recurring_profile',
+      entity_id: data.id,
+    })
     return data
   }, [business])
 
