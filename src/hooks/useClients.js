@@ -96,7 +96,33 @@ export function useClients({ search = '' } = {}) {
     return data
   }, [business])
 
-  return { clients: filtered, allClients: clients, loading, error, refetch, addClient }
+  const updateClient = useCallback(async (id, patch) => {
+    const clean = {
+      name: patch.name?.trim(),
+      client_type: patch.client_type,
+      email: patch.email ?? null,
+      phone: patch.phone ?? null,
+      address_line_1: patch.address_line_1 ?? null,
+      address_line_2: patch.address_line_2 ?? null,
+      city: patch.city ?? null,
+      postcode: patch.postcode ?? null,
+      notes: patch.notes ?? null,
+      pipeline_stage: patch.pipeline_stage,
+    }
+    Object.keys(clean).forEach(k => clean[k] === undefined && delete clean[k])
+    const { data, error } = await supabase.from('clients').update(clean).eq('id', id).select().single()
+    if (error) throw error
+    setClients(prev => prev.map(c => c.id === id ? data : c))
+    return data
+  }, [])
+
+  const deleteClient = useCallback(async (id) => {
+    const { error } = await supabase.from('clients').delete().eq('id', id)
+    if (error) throw error
+    setClients(prev => prev.filter(c => c.id !== id))
+  }, [])
+
+  return { clients: filtered, allClients: clients, loading, error, refetch, addClient, updateClient, deleteClient }
 }
 
 export function useClient(id) {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Modal from './Modal'
@@ -16,21 +16,57 @@ const emptyForm = {
   city: '',
   postcode: '',
   notes: '',
+  pipeline_stage: 'lead',
+}
+
+function fromRecord(c) {
+  if (!c) return emptyForm
+  return {
+    name: c.name ?? '',
+    client_type: c.client_type ?? 'residential',
+    email: c.email ?? '',
+    phone: c.phone ?? '',
+    address_line_1: c.address_line_1 ?? '',
+    address_line_2: c.address_line_2 ?? '',
+    city: c.city ?? '',
+    postcode: c.postcode ?? '',
+    notes: c.notes ?? '',
+    pipeline_stage: c.pipeline_stage ?? 'lead',
+  }
 }
 
 /**
- * AddClientModal — receives `addClient` as prop so it doesn't spin up its own
- * useClients subscription (which would race against the owning page).
+ * Client form modal. Dual-mode:
+ *   • Create — pass `addClient` mutation
+ *   • Edit   — pass `editing` (existing client) + `updateClient` mutation
+ *
+ * Other props:
+ *   open, onClose              required
+ *   onCreated(saved)           optional; default behaviour on create is to
+ *                              navigate to /clients/:id
+ *   zLayer                     pass 60+ when nested in another modal
  */
-export default function AddClientModal({ open, onClose, addClient, onCreated, zLayer }) {
+export default function AddClientModal({
+  open, onClose,
+  addClient, updateClient,
+  editing,
+  onCreated, zLayer,
+}) {
   const navigate = useNavigate()
-  const [form, setForm] = useState(emptyForm)
+  const isEdit = !!editing
+  const [form, setForm] = useState(() => fromRecord(editing))
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
 
+  // Hydrate when modal opens or when the editing record changes
+  useEffect(() => {
+    if (open) setForm(fromRecord(editing))
+    if (open) setErrors({})
+  }, [open, editing?.id])
+
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const reset = () => { setForm(emptyForm); setErrors({}); setSaving(false) }
+  const reset = () => { setForm(fromRecord(editing)); setErrors({}); setSaving(false) }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -42,30 +78,49 @@ export default function AddClientModal({ open, onClose, addClient, onCreated, zL
 
     setSaving(true)
     try {
-      const saved = await addClient({
+      const payload = {
         ...form,
         postcode: form.postcode ? formatPostcode(form.postcode) : null,
-      })
-      toast.success(`${saved.name} added`, { description: 'New client in your list.' })
+      }
+      const saved = isEdit
+        ? await updateClient(editing.id, payload)
+        : await addClient(payload)
+      toast.success(isEdit ? `${saved.name} updated` : `${saved.name} added`)
       reset()
       onClose?.()
-      if (onCreated) onCreated(saved)
-      else navigate(`/clients/${saved.id}`)
+      if (!isEdit) {
+        if (onCreated) onCreated(saved)
+        else navigate(`/clients/${saved.id}`)
+      } else {
+        onCreated?.(saved)
+      }
     } catch (err) {
-      toast.error('Could not add client', { description: err.message })
+      toast.error(isEdit ? 'Could not update client' : 'Could not add client', { description: err.message })
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Modal open={open} onClose={() => { reset(); onClose?.() }} title="Add client" description="You can add premises and jobs on the next screen." size="md" zLayer={zLayer}>
+    <Modal
+      open={open}
+      onClose={() => { reset(); onClose?.() }}
+      title={isEdit ? 'Edit client' : 'Add client'}
+      description={isEdit ? 'Update contact details or pipeline stage.' : 'You can add premises and jobs on the next screen.'}
+      size="md"
+      zLayer={zLayer}
+    >
       <form onSubmit={submit} className="space-y-4">
         <Input label="Full name or business name" required autoFocus value={form.name} onChange={e => update('name', e.target.value)} error={errors.name} placeholder="e.g. Riverside Café Ltd" />
 
-        <Select label="Client type" value={form.client_type} onChange={e => update('client_type', e.target.value)}>
-          {CLIENT_TYPES.map(t => <option key={t} value={t}>{statusLabel(t)}</option>)}
-        </Select>
+        <div className="grid grid-cols-2 gap-3">
+          <Select label="Client type" value={form.client_type} onChange={e => update('client_type', e.target.value)}>
+            {CLIENT_TYPES.map(t => <option key={t} value={t}>{statusLabel(t)}</option>)}
+          </Select>
+          <Select label="Pipeline stage" value={form.pipeline_stage} onChange={e => update('pipeline_stage', e.target.value)}>
+            {['lead', 'quoted', 'active', 'on_hold', 'lost'].map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
+          </Select>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Input label="Email" type="email" value={form.email} onChange={e => update('email', e.target.value)} placeholder="hello@example.co.uk" />
@@ -84,7 +139,7 @@ export default function AddClientModal({ open, onClose, addClient, onCreated, zL
 
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={() => { reset(); onClose?.() }} className="flex-1">Cancel</Button>
-          <Button type="submit" loading={saving} className="flex-1">Add client</Button>
+          <Button type="submit" loading={saving} className="flex-1">{isEdit ? 'Save changes' : 'Add client'}</Button>
         </div>
       </form>
     </Modal>

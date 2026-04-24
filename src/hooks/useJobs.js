@@ -90,6 +90,21 @@ export function useJobs({ clientId, premisesId, divisionSlug, status } = {}) {
     return data
   }, [business])
 
+  const updateJob = useCallback(async (id, patch) => {
+    const clean = { ...patch }
+    Object.keys(clean).forEach(k => clean[k] === undefined && delete clean[k])
+    const { data, error } = await supabase.from('jobs').update(clean).eq('id', id).select().single()
+    if (error) throw error
+    setJobs(prev => prev.map(j => j.id === data.id ? data : j))
+    return data
+  }, [])
+
+  const deleteJob = useCallback(async (id) => {
+    const { error } = await supabase.from('jobs').delete().eq('id', id)
+    if (error) throw error
+    setJobs(prev => prev.filter(j => j.id !== id))
+  }, [])
+
   const updateJobStatus = useCallback(async (jobId, nextStatus) => {
     const patch = { status: nextStatus }
     if (nextStatus === 'in_progress') patch.started_at = new Date().toISOString()
@@ -100,7 +115,7 @@ export function useJobs({ clientId, premisesId, divisionSlug, status } = {}) {
     return data
   }, [])
 
-  return { jobs, loading, error, refetch, createJob, updateJobStatus }
+  return { jobs, loading, error, refetch, createJob, updateJob, updateJobStatus, deleteJob }
 }
 
 function byScheduledDateDesc(a, b) {

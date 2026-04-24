@@ -62,6 +62,26 @@ export function usePremises({ clientId, divisionSlug } = {}) {
     return () => { supabase.removeChannel(ch) }
   }, [business, clientId, divisionSlug])
 
+  const updatePremises = useCallback(async (id, patch) => {
+    const clean = { ...patch }
+    if (patch.postcode !== undefined) clean.postcode = patch.postcode || null
+    if (patch.regular_service === false) {
+      clean.service_frequency = null
+      clean.next_due_at = null
+    }
+    Object.keys(clean).forEach(k => clean[k] === undefined && delete clean[k])
+    const { data, error } = await supabase.from('premises').update(clean).eq('id', id).select().single()
+    if (error) throw error
+    setPremises(prev => prev.map(p => p.id === id ? data : p))
+    return data
+  }, [])
+
+  const deletePremises = useCallback(async (id) => {
+    const { error } = await supabase.from('premises').delete().eq('id', id)
+    if (error) throw error
+    setPremises(prev => prev.filter(p => p.id !== id))
+  }, [])
+
   const addPremises = useCallback(async (payload) => {
     if (!business) throw new Error('No business loaded')
     if (!payload.client_id) throw new Error('client_id required')
@@ -94,5 +114,5 @@ export function usePremises({ clientId, divisionSlug } = {}) {
     return data
   }, [business])
 
-  return { premises, loading, error, refetch, addPremises }
+  return { premises, loading, error, refetch, addPremises, updatePremises, deletePremises }
 }

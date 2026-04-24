@@ -25,29 +25,54 @@ const emptyForm = (division_slug) => ({
   next_due_at: '',
 })
 
+function fromRecord(p) {
+  if (!p) return null
+  return {
+    division_slug: p.division_slug,
+    name: p.name ?? '',
+    address_line_1: p.address_line_1 ?? '',
+    address_line_2: p.address_line_2 ?? '',
+    city: p.city ?? '',
+    postcode: p.postcode ?? '',
+    site_type: p.site_type ?? 'commercial',
+    access_notes: p.access_notes ?? '',
+    regular_service: !!p.regular_service,
+    service_frequency: p.service_frequency ?? 'monthly',
+    next_due_at: p.next_due_at ? p.next_due_at.slice(0, 10) : '',
+  }
+}
+
 export default function AddPremisesModal({
   open,
   onClose,
   client,
   addPremises,
+  updatePremises,
+  editing,
   onCreated,
   zLayer,
 }) {
+  const isEdit = !!editing
   const { currentDivision, available } = useDivision()
   // Default to active division if not Group view, else first available
   const defaultDivision = currentDivision?.slug ?? available[0]?.slug ?? 'pest'
-  const [form, setForm] = useState(() => emptyForm(defaultDivision))
+  const [form, setForm] = useState(() => fromRecord(editing) ?? emptyForm(defaultDivision))
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
 
-  // When the modal opens, re-sync the default division to current active
+  // When the modal opens, hydrate with the editing record or reset
   useEffect(() => {
-    if (open) setForm(emptyForm(defaultDivision))
-  }, [open, defaultDivision])
+    if (!open) return
+    setForm(fromRecord(editing) ?? emptyForm(defaultDivision))
+    setErrors({})
+  }, [open, editing?.id, defaultDivision])
 
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const reset = () => { setForm(emptyForm(defaultDivision)); setErrors({}); setSaving(false) }
+  const reset = () => {
+    setForm(fromRecord(editing) ?? emptyForm(defaultDivision))
+    setErrors({}); setSaving(false)
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -60,8 +85,8 @@ export default function AddPremisesModal({
 
     setSaving(true)
     try {
-      const saved = await addPremises({
-        client_id: client.id,
+      const payload = {
+        client_id: client?.id,
         division_slug: form.division_slug,
         name: form.name,
         address_line_1: form.address_line_1,
@@ -75,20 +100,23 @@ export default function AddPremisesModal({
         next_due_at: form.regular_service && form.next_due_at
           ? new Date(form.next_due_at).toISOString()
           : null,
-      })
-      toast.success('Premises added', { description: saved.address_line_1 })
+      }
+      const saved = isEdit
+        ? await updatePremises(editing.id, payload)
+        : await addPremises(payload)
+      toast.success(isEdit ? 'Premises updated' : 'Premises added', { description: saved.address_line_1 })
       reset()
       onClose?.()
-      if (onCreated) onCreated(saved)
+      onCreated?.(saved)
     } catch (err) {
-      toast.error('Could not add premises', { description: err.message })
+      toast.error(isEdit ? 'Could not update premises' : 'Could not add premises', { description: err.message })
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Modal open={open} onClose={() => { reset(); onClose?.() }} title="Add premises" description={`For ${client?.name ?? 'client'}`} size="md" zLayer={zLayer}>
+    <Modal open={open} onClose={() => { reset(); onClose?.() }} title={isEdit ? 'Edit premises' : 'Add premises'} description={`For ${client?.name ?? 'client'}`} size="md" zLayer={zLayer}>
       <form onSubmit={submit} className="space-y-4">
         {/* Division selector */}
         <div className="space-y-1.5">
@@ -202,7 +230,7 @@ export default function AddPremisesModal({
 
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={() => { reset(); onClose?.() }} className="flex-1">Cancel</Button>
-          <Button type="submit" loading={saving} className="flex-1">Add premises</Button>
+          <Button type="submit" loading={saving} className="flex-1">{isEdit ? 'Save changes' : 'Add premises'}</Button>
         </div>
       </form>
     </Modal>

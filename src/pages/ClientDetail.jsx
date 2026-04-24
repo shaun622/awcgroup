@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import {
   ArrowLeft, Phone, Mail, MapPin, Edit3, Building2, Briefcase, Receipt, Activity, Plus,
-  Clock, Repeat,
+  Clock, Repeat, Trash2, MoreHorizontal,
 } from 'lucide-react'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
@@ -13,7 +14,9 @@ import EmptyState from '../components/ui/EmptyState'
 import DivisionChip, { DivisionDot } from '../components/ui/DivisionChip'
 import { SkeletonCard, SkeletonList } from '../components/ui/Skeleton'
 import AddPremisesModal from '../components/ui/AddPremisesModal'
-import { useClient } from '../hooks/useClients'
+import AddClientModal from '../components/ui/AddClientModal'
+import ConfirmModal from '../components/ui/ConfirmModal'
+import { useClient, useClients } from '../hooks/useClients'
 import { usePremises } from '../hooks/usePremises'
 import { useJobs } from '../hooks/useJobs'
 import { useQuotes } from '../hooks/useQuotes'
@@ -36,7 +39,10 @@ export default function ClientDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { client, loading } = useClient(id)
+  const { updateClient, deleteClient } = useClients()
   const [tab, setTab] = useState('overview')
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   if (loading) {
     return <PageWrapper size="xl"><SkeletonCard /></PageWrapper>
@@ -70,9 +76,27 @@ export default function ClientDetail() {
                 <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight truncate">{client.name}</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{statusLabel(client.client_type)}</p>
               </div>
-              <Badge variant={statusVariant(client.pipeline_stage)}>
-                {statusLabel(client.pipeline_stage)}
-              </Badge>
+              <div className="flex items-center gap-1 shrink-0">
+                <Badge variant={statusVariant(client.pipeline_stage)}>
+                  {statusLabel(client.pipeline_stage)}
+                </Badge>
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="min-h-tap min-w-tap flex items-center justify-center rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Edit client"
+                  title="Edit client"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setDeleteOpen(true)}
+                  className="min-h-tap min-w-tap flex items-center justify-center rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                  aria-label="Delete client"
+                  title="Delete client"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-gray-300">
               {client.phone && (
@@ -89,6 +113,25 @@ export default function ClientDetail() {
           </div>
         </div>
       </Card>
+
+      <AddClientModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        editing={client}
+        updateClient={updateClient}
+      />
+      <ConfirmModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={`Delete ${client.name}?`}
+        description="This permanently deletes the client and all their premises, jobs, quotes and invoices. Cannot be undone."
+        confirmLabel="Delete client"
+        onConfirm={async () => {
+          await deleteClient(client.id)
+          toast.success('Client deleted')
+          navigate('/clients')
+        }}
+      />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-gray-200 dark:border-gray-800 -mx-4 px-4 mb-4 overflow-x-auto scrollbar-none">
@@ -150,9 +193,6 @@ function OverviewTab({ client }) {
         </Card>
       )}
 
-      <div className="flex gap-2">
-        <Button variant="secondary" leftIcon={<Edit3 className="w-4 h-4" />}>Edit client</Button>
-      </div>
     </div>
   )
 }
@@ -160,9 +200,11 @@ function OverviewTab({ client }) {
 /* ──────────────────────────────────────────────────────────────────────── */
 
 function PremisesTab({ client }) {
-  const { premises, loading, addPremises } = usePremises({ clientId: client.id })
+  const { premises, loading, addPremises, updatePremises, deletePremises } = usePremises({ clientId: client.id })
   const { currentDivision, isGroupView } = useDivision()
   const [addOpen, setAddOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [deleting, setDeleting] = useState(null)
 
   // Scope: if a specific division is active, only show its premises.
   // In Group view, show all divisions (grouped by division).
@@ -225,7 +267,7 @@ function PremisesTab({ client }) {
                   <span className="text-xs text-gray-500">{list.length}</span>
                 </div>
                 <div className="space-y-3">
-                  {list.map(p => <PremisesCard key={p.id} premises={p} />)}
+                  {list.map(p => <PremisesCard key={p.id} premises={p} onEdit={() => setEditing(p)} onDelete={() => setDeleting(p)} />)}
                 </div>
               </div>
             )
@@ -233,16 +275,34 @@ function PremisesTab({ client }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {shown.map(p => <PremisesCard key={p.id} premises={p} />)}
+          {shown.map(p => <PremisesCard key={p.id} premises={p} onEdit={() => setEditing(p)} onDelete={() => setDeleting(p)} />)}
         </div>
       )}
 
       <AddPremisesModal open={addOpen} onClose={() => setAddOpen(false)} client={client} addPremises={addPremises} />
+      <AddPremisesModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        client={client}
+        editing={editing}
+        updatePremises={updatePremises}
+      />
+      <ConfirmModal
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        title={`Delete ${deleting?.name || deleting?.address_line_1 || 'premises'}?`}
+        description="Deletes all jobs and reports tied to this premises. Cannot be undone."
+        confirmLabel="Delete premises"
+        onConfirm={async () => {
+          await deletePremises(deleting.id)
+          toast.success('Premises deleted')
+        }}
+      />
     </>
   )
 }
 
-function PremisesCard({ premises }) {
+function PremisesCard({ premises, onEdit, onDelete }) {
   const addr = [premises.address_line_1, premises.address_line_2, premises.city, premises.postcode].filter(Boolean).join(', ')
   const div = getDivision(premises.division_slug)
   return (
@@ -259,11 +319,31 @@ function PremisesCard({ premises }) {
                 {addr || '—'}
               </p>
             </div>
-            {premises.regular_service && (
-              <Badge variant="primary" className="shrink-0">
-                <Repeat className="w-3 h-3" /> {statusLabel(premises.service_frequency)}
-              </Badge>
-            )}
+            <div className="flex items-center gap-1 shrink-0">
+              {premises.regular_service && (
+                <Badge variant="primary">
+                  <Repeat className="w-3 h-3" /> {statusLabel(premises.service_frequency)}
+                </Badge>
+              )}
+              {onEdit && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEdit() }}
+                  className="min-h-tap min-w-tap flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Edit premises"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete() }}
+                  className="min-h-tap min-w-tap flex items-center justify-center rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  aria-label="Delete premises"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
             <span className="inline-flex items-center gap-1">{statusLabel(premises.site_type)}</span>

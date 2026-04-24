@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   ArrowLeft, CalendarClock, Clock, PoundSterling, Briefcase, Building2, MapPin,
-  User, Play, Pause, CheckCircle2, XCircle, FileText, ChevronRight,
+  User, Play, Pause, CheckCircle2, XCircle, FileText, ChevronRight, Edit3, Trash2,
 } from 'lucide-react'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
@@ -13,6 +13,8 @@ import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import DivisionChip from '../components/ui/DivisionChip'
+import EditJobModal from '../components/ui/EditJobModal'
+import ConfirmModal from '../components/ui/ConfirmModal'
 import { useJob, useJobs } from '../hooks/useJobs'
 import { cn, formatDateTime, formatGBP, statusLabel, statusVariant } from '../lib/utils'
 
@@ -20,9 +22,11 @@ export default function JobDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { job, client, premises, staff, loading, refetch } = useJob(id)
-  const { updateJobStatus } = useJobs()
+  const { updateJob, updateJobStatus, deleteJob } = useJobs()
 
   const [updating, setUpdating] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   if (loading) return <PageWrapper size="xl"><SkeletonCard /></PageWrapper>
 
@@ -69,14 +73,36 @@ export default function JobDetail() {
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line">{job.description}</p>
             )}
           </div>
-          {job.price != null && (
-            <p className="text-right">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Price</span>
-              <span className="block text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">{formatGBP(job.price)}</span>
-            </p>
-          )}
+          <div className="flex items-start gap-1 shrink-0">
+            {job.price != null && (
+              <p className="text-right mr-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Price</span>
+                <span className="block text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">{formatGBP(job.price)}</span>
+              </p>
+            )}
+            <button onClick={() => setEditOpen(true)} className="min-h-tap min-w-tap flex items-center justify-center rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Edit job">
+              <Edit3 className="w-4 h-4" />
+            </button>
+            <button onClick={() => setDeleteOpen(true)} className="min-h-tap min-w-tap flex items-center justify-center rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40" aria-label="Delete job">
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </Card>
+
+      <EditJobModal open={editOpen} onClose={() => { setEditOpen(false); refetch() }} job={job} updateJob={updateJob} />
+      <ConfirmModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={`Delete ${job.title}?`}
+        description="This permanently deletes the job and any attached report, tasks and photos. Cannot be undone."
+        confirmLabel="Delete job"
+        onConfirm={async () => {
+          await deleteJob(job.id)
+          toast.success('Job deleted')
+          navigate('/jobs')
+        }}
+      />
 
       {/* Status actions */}
       <StatusActions job={job} onChange={setStatus} disabled={updating} />
