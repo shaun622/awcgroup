@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useBusiness } from '../contexts/BusinessContext'
+import { projectNextVisit } from './useRecurringProfiles'
 
 /**
  * useSchedule — merges scheduled jobs with overdue premises into a single
@@ -14,6 +15,7 @@ export function useSchedule({ divisionSlug } = {}) {
   const { business } = useBusiness()
   const [jobs, setJobs] = useState([])
   const [overdue, setOverdue] = useState([])
+  const [projections, setProjections] = useState([])
   const [loading, setLoading] = useState(true)
   const channelRef = useRef(null)
 
@@ -43,13 +45,21 @@ export function useSchedule({ divisionSlug } = {}) {
       .lt('next_due_at', new Date().toISOString())
     if (divisionSlug) pq = pq.eq('division_slug', divisionSlug)
 
-    const [jRes, pRes] = await Promise.all([jq, pq])
+    // Active recurring profiles — we'll project the next visit client-side
+    let rq = supabase.from('recurring_profiles')
+      .select('*')
+      .eq('business_id', business.id)
+      .eq('status', 'active')
+    if (divisionSlug) rq = rq.eq('division_slug', divisionSlug)
+
+    const [jRes, pRes, rRes] = await Promise.all([jq, pq, rq])
     const js = jRes.data ?? []
     const os = pRes.data ?? []
+    const rs = rRes.data ?? []
 
     // Enrich with client + premises lookups (one-shot, cached per-call)
-    const clientIds = unique([...js.map(j => j.client_id), ...os.map(o => o.client_id)])
-    const premisesIds = unique(js.map(j => j.premises_id).filter(Boolean))
+    const clientIds = unique([...js.map(j => j.client_id), ...os.map(o => o.client_id), ...rs.map(r => r.client_id)])
+    const premisesIds = unique([...js.map(j => j.premises_id), ...rs.map(r => r.premises_id)].filter(Boolean))
 
     const [{ data: clients }, { data: premises }] = await Promise.all([
       clientIds.length
@@ -90,6 +100,28 @@ export function useSchedule({ divisionSlug } = {}) {
       client_id: p.client_id,
       href: `/clients/${p.client_id}`,
     })))
+    setProjections(rs
+      .map(r => {
+        const next = projectNextVisit(r)
+        if (!next) return null
+        const prem = pById.get(r.premises_id)
+        return {
+          key: `profile-${r.id}`,
+          kind: 'recurring',
+          id: r.id,
+          date: next.toISOString(),
+          division_slug: r.division_slug,
+          title: r.title,
+          client_name: cById.get(r.client_id)?.name ?? '—',
+          premises: prem,
+          frequency: r.frequency,
+          client_id: r.client_id,
+          price: r.price,
+          duration_minutes: r.duration_minutes,
+          href: '/recurring',
+        }
+      })
+      .filter(Boolean))
     setLoading(false)
   }, [business, divisionSlug])
 
@@ -102,14 +134,15 @@ export function useSchedule({ divisionSlug } = {}) {
     const ch = supabase.channel(`schedule-${business.id}-${suffix}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `business_id=eq.${business.id}` }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'premises', filter: `business_id=eq.${business.id}` }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_profiles', filter: `business_id=eq.${business.id}` }, () => load())
       .subscribe()
     channelRef.current = ch
     return () => { supabase.removeChannel(ch) }
   }, [business, load])
 
-  const buckets = useMemo(() => bucketStops([...overdue, ...jobs]), [jobs, overdue])
+  const buckets = useMemo(() => bucketStops([...overdue, ...jobs, ...projections]), [jobs, overdue, projections])
 
-  return { buckets, jobs, overdue, loading, refetch: load }
+  return { buckets, jobs, overdue, projections, loading, refetch: load }
 }
 
 function unique(xs) {
@@ -130,7 +163,7 @@ function bucketStops(stops) {
   for (const s of stops) {
     const d = s.date ? new Date(s.date) : null
     if (!d) { out.upcoming.push(s); continue }
-    if (s.kind === 'overdue' || d < startOfToday) {
+    if (s.kind === 'overdue' || (s.kind !== 'recurring' && d < startOfToday) || (s.kind === 'recurring' && d < startOfToday)) {
       out.overdue.push(s)
     } else if (d < startOfTomorrow) {
       out.today.push(s)

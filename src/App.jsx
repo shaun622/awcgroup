@@ -13,6 +13,7 @@ import ClientDetail from './pages/ClientDetail'
 import Jobs from './pages/Jobs'
 import JobDetail from './pages/JobDetail'
 import NewJobReport from './pages/NewJobReport'
+import Recurring from './pages/Recurring'
 import Quotes from './pages/Quotes'
 import QuoteBuilder from './pages/QuoteBuilder'
 import PublicQuote from './pages/PublicQuote'
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/jobs"        element={<Jobs />} />
             <Route path="/jobs/:id"         element={<JobDetail />} />
             <Route path="/jobs/:id/report"  element={<NewJobReport />} />
+            <Route path="/recurring"        element={<Recurring />} />
             <Route path="/quotes"        element={<Quotes />} />
             <Route path="/quotes/new"    element={<QuoteBuilder />} />
             <Route path="/quotes/:id"    element={<QuoteBuilder />} />
