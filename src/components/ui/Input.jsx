@@ -2,11 +2,11 @@ import { forwardRef } from 'react'
 import { cn } from '../../lib/utils'
 
 const Input = forwardRef(function Input(
-  { label, error, hint, className, large, leftAdornment, rightAdornment, ...props },
+  { label, error, hint, className, wrapperClassName, large, leftAdornment, rightAdornment, ...props },
   ref
 ) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn('space-y-1.5', wrapperClassName)}>
       {label && (
         <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
           {label}

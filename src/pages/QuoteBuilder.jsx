@@ -328,14 +328,14 @@ export default function QuoteBuilder() {
           {lineItems.map((line, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-start">
               <Input
-                className="col-span-12 sm:col-span-6"
+                wrapperClassName="col-span-12 sm:col-span-6"
                 placeholder="Description"
                 value={line.description}
                 onChange={e => setLine(i, { description: e.target.value })}
                 disabled={readOnly}
               />
               <Input
-                className="col-span-4 sm:col-span-2"
+                wrapperClassName="col-span-4 sm:col-span-2"
                 type="number"
                 min="0"
                 step="0.5"
@@ -345,7 +345,7 @@ export default function QuoteBuilder() {
                 disabled={readOnly}
               />
               <Input
-                className="col-span-5 sm:col-span-3"
+                wrapperClassName="col-span-5 sm:col-span-3"
                 type="number"
                 min="0"
                 step="0.01"

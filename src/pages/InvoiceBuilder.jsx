@@ -236,9 +236,9 @@ export default function InvoiceBuilder() {
         <div className="space-y-2">
           {lineItems.map((line, i) => (
             <div key={i} className="grid grid-cols-12 gap-2 items-start">
-              <Input className="col-span-12 sm:col-span-6" placeholder="Description" value={line.description} onChange={e => setLine(i, { description: e.target.value })} disabled={readOnly} />
-              <Input className="col-span-4 sm:col-span-2" type="number" min="0" step="0.5" placeholder="Qty" value={line.qty} onChange={e => setLine(i, { qty: e.target.value })} disabled={readOnly} />
-              <Input className="col-span-5 sm:col-span-3" type="number" min="0" step="0.01" leftAdornment="£" placeholder="Unit" value={line.unit_price} onChange={e => setLine(i, { unit_price: e.target.value })} disabled={readOnly} />
+              <Input wrapperClassName="col-span-12 sm:col-span-6" placeholder="Description" value={line.description} onChange={e => setLine(i, { description: e.target.value })} disabled={readOnly} />
+              <Input wrapperClassName="col-span-4 sm:col-span-2" type="number" min="0" step="0.5" placeholder="Qty" value={line.qty} onChange={e => setLine(i, { qty: e.target.value })} disabled={readOnly} />
+              <Input wrapperClassName="col-span-5 sm:col-span-3" type="number" min="0" step="0.01" leftAdornment="£" placeholder="Unit" value={line.unit_price} onChange={e => setLine(i, { unit_price: e.target.value })} disabled={readOnly} />
               <div className="col-span-3 sm:col-span-1 flex items-center justify-end h-[48px]">
                 {!readOnly && lineItems.length > 1 && (
                   <button type="button" onClick={() => removeLine(i)} className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" aria-label="Remove">
