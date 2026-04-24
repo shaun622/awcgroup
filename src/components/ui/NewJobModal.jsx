@@ -7,6 +7,7 @@ import Avatar from './Avatar'
 import AddClientModal from './AddClientModal'
 import AddPremisesModal from './AddPremisesModal'
 import AddJobTypeTemplateModal from './AddJobTypeTemplateModal'
+import AddStaffModal from './AddStaffModal'
 import { useDivision } from '../../contexts/DivisionContext'
 import { useClients } from '../../hooks/useClients'
 import { usePremises } from '../../hooks/usePremises'
@@ -73,6 +74,8 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [addPremisesOpen, setAddPremisesOpen] = useState(false)
   const [addJobTypeOpen, setAddJobTypeOpen] = useState(false)
+  const [addStaffOpen, setAddStaffOpen] = useState(false)
+  const [newStaffId, setNewStaffId] = useState(null)
 
   // Narrow client list if divisions ever become client-scoped; for now they're shared
   const clientOptions = useMemo(() => allClients ?? [], [allClients])
@@ -296,9 +299,23 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
           />
         </div>
 
-        <Select label="Assign to (optional)" value={staffId} onChange={e => setStaffId(e.target.value)}>
+        <Select
+          label="Assign to (optional)"
+          value={staffId}
+          onChange={e => {
+            if (e.target.value === ADD_SENTINEL) { setAddStaffOpen(true); return }
+            setStaffId(e.target.value)
+          }}
+        >
           <option value="">— Unassigned —</option>
           {staff.map(s => <option key={s.id} value={s.id}>{s.name}{s.role === 'owner' ? ' (you)' : ''}</option>)}
+          {/* Newly-added staff aren't in the hook's state yet — keep them
+              selectable until the next refetch cycle catches up. */}
+          {newStaffId && !staff.some(s => s.id === newStaffId.id) && (
+            <option value={newStaffId.id}>{newStaffId.name}</option>
+          )}
+          <option disabled>──────────</option>
+          <option value={ADD_SENTINEL}>+ Add new staff…</option>
         </Select>
 
         <div className="flex gap-2 pt-2">
@@ -328,6 +345,13 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
         onClose={() => setAddJobTypeOpen(false)}
         createTemplate={createTemplate}
         onCreated={(t) => { setTemplateId(t.id); setAddJobTypeOpen(false) }}
+        zLayer={60}
+      />
+      <AddStaffModal
+        open={addStaffOpen}
+        onClose={() => setAddStaffOpen(false)}
+        defaultDivisions={[divisionSlug]}
+        onCreated={(s) => { setNewStaffId(s); setStaffId(s.id); setAddStaffOpen(false) }}
         zLayer={60}
       />
     </Modal>

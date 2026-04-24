@@ -13,14 +13,14 @@ const ROLES = [
   { value: 'admin', label: 'Admin — full access except ownership' },
 ]
 
-export default function AddStaffModal({ open, onClose, onCreated }) {
+export default function AddStaffModal({ open, onClose, onCreated, defaultDivisions, zLayer }) {
   const { business } = useBusiness()
   const [form, setForm] = useState({
     name: '',
     email: '',
     phone: '',
     role: 'tech',
-    divisions: business?.enabled_divisions ?? [],
+    divisions: defaultDivisions ?? business?.enabled_divisions ?? [],
   })
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
@@ -36,7 +36,7 @@ export default function AddStaffModal({ open, onClose, onCreated }) {
   }
 
   const reset = () => {
-    setForm({ name: '', email: '', phone: '', role: 'tech', divisions: business?.enabled_divisions ?? [] })
+    setForm({ name: '', email: '', phone: '', role: 'tech', divisions: defaultDivisions ?? business?.enabled_divisions ?? [] })
     setErrors({}); setSaving(false)
   }
 
@@ -72,7 +72,7 @@ export default function AddStaffModal({ open, onClose, onCreated }) {
   }
 
   return (
-    <Modal open={open} onClose={() => { reset(); onClose?.() }} title="Add staff" description="Invite flow with email comes in a later pass — this adds them to the roster now." size="md">
+    <Modal open={open} onClose={() => { reset(); onClose?.() }} title="Add staff" description="Invite flow with email comes in a later pass — this adds them to the roster now." size="md" zLayer={zLayer}>
       <form onSubmit={submit} className="space-y-4">
         <Input label="Name" required autoFocus value={form.name} onChange={e => update('name', e.target.value)} error={errors.name} placeholder="e.g. Sarah Chen" />
 
