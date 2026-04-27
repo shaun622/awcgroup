@@ -109,7 +109,7 @@ export default function FireDoorDetail() {
         </div>
       </Card>
 
-      {/* Start assessment CTA — disabled until commit 3 lands */}
+      {/* Start assessment CTA */}
       <Card className="!p-5 mb-4 border-dashed">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
@@ -121,8 +121,11 @@ export default function FireDoorDetail() {
               71-item BS 8214:2016 checklist with dual sign-off
             </p>
           </div>
-          <Button disabled leftIcon={<ClipboardCheck className="w-4 h-4" />}>
-            Coming next
+          <Button
+            leftIcon={<ClipboardCheck className="w-4 h-4" />}
+            onClick={() => navigate(`/premises/${premisesId}/doors/${doorId}/assess/new`)}
+          >
+            Start
           </Button>
         </div>
       </Card>
@@ -139,7 +142,7 @@ export default function FireDoorDetail() {
       ) : (
         <div className="space-y-3">
           {assessments.map(a => (
-            <Card key={a.id}>
+            <Card key={a.id} onClick={() => navigate(`/premises/${premisesId}/doors/${doorId}/assess/${a.id}`)}>
               <div className="flex items-start gap-3">
                 <div className={cn(
                   'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
@@ -151,21 +154,29 @@ export default function FireDoorDetail() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {formatDate(a.assessed_at)}
-                    </p>
-                    {a.outcome && (
-                      <Badge variant={a.outcome === 'pass' ? 'success' : a.outcome === 'fail' ? 'danger' : 'warning'}>
-                        {statusLabel(a.outcome)}
-                      </Badge>
-                    )}
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {formatDate(a.assessed_at)}
+                      </p>
+                      {a.assessor_name && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{a.assessor_name}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {a.status === 'in_progress'
+                        ? <Badge variant="warning">In progress</Badge>
+                        : a.outcome && (
+                          <Badge variant={a.outcome === 'pass' ? 'success' : a.outcome === 'fail' ? 'danger' : 'warning'}>
+                            {statusLabel(a.outcome)}
+                          </Badge>
+                        )}
+                    </div>
                   </div>
-                  {a.assessor_name && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{a.assessor_name}</p>
+                  {a.status === 'completed' && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {a.pass_count} pass · {a.fail_count} fail · {a.na_count} N/A
+                    </p>
                   )}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {a.pass_count} pass · {a.fail_count} fail · {a.na_count} N/A
-                  </p>
                 </div>
               </div>
             </Card>

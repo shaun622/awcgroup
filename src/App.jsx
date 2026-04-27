@@ -12,6 +12,7 @@ import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
 import PremisesDetail from './pages/PremisesDetail'
 import FireDoorDetail from './pages/FireDoorDetail'
+import FireDoorAssessment from './pages/FireDoorAssessment'
 import Jobs from './pages/Jobs'
 import JobDetail from './pages/JobDetail'
 import NewJobReport from './pages/NewJobReport'
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/premises/:id" element={<PremisesDetail />} />
             <Route path="/premises/:premisesId/doors/:doorId" element={<FireDoorDetail />} />
+            <Route path="/premises/:premisesId/doors/:doorId/assess/:assessmentId" element={<FireDoorAssessment />} />
             <Route path="/jobs"        element={<Jobs />} />
             <Route path="/jobs/:id"         element={<JobDetail />} />
             <Route path="/jobs/:id/report"  element={<NewJobReport />} />
