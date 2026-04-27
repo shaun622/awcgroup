@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   ArrowLeft, ClipboardList, Camera, FileText, CheckCircle2, Check, X, Upload, Trash2, Loader2,
-  Flame, ShieldCheck, ChevronRight,
+  Flame, ShieldCheck, ChevronRight, Plus,
 } from 'lucide-react'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
@@ -13,6 +13,7 @@ import DynamicField from '../components/ui/DynamicField'
 import DivisionChip from '../components/ui/DivisionChip'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import Badge from '../components/ui/Badge'
+import AddFireDoorModal from '../components/ui/AddFireDoorModal'
 import { useJob, useJobs } from '../hooks/useJobs'
 import { useJobReport } from '../hooks/useJobReport'
 import { useFireDoors } from '../hooks/useFireDoors'
@@ -171,7 +172,7 @@ export default function NewJobReport() {
 
       {/* Fire-door assessments — only for fire-division jobs at premises with registered doors */}
       {job.division_slug === 'fire' && job.premises_id && (
-        <FireDoorsForJobSection premisesId={job.premises_id} />
+        <FireDoorsForJobSection premisesId={job.premises_id} premises={premises} />
       )}
 
       {/* Tasks */}
@@ -321,11 +322,12 @@ export default function NewJobReport() {
 
 /* ─── Fire-door assessment bridge (fire-division jobs only) ─────────── */
 
-function FireDoorsForJobSection({ premisesId }) {
+function FireDoorsForJobSection({ premisesId, premises }) {
   const navigate = useNavigate()
   const { business } = useBusiness()
-  const { fireDoors, loading } = useFireDoors({ premisesId })
+  const { fireDoors, loading, addFireDoor } = useFireDoors({ premisesId })
   const [latestByDoor, setLatestByDoor] = useState(new Map())
+  const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => {
     if (!business || fireDoors.length === 0) { setLatestByDoor(new Map()); return }
@@ -347,7 +349,7 @@ function FireDoorsForJobSection({ premisesId }) {
     return () => { alive = false }
   }, [business, fireDoors])
 
-  if (loading || fireDoors.length === 0) return null
+  if (loading) return null
 
   return (
     <section className="mt-5">
@@ -356,7 +358,21 @@ function FireDoorsForJobSection({ premisesId }) {
         <span className="ml-auto text-[11px] normal-case font-normal tracking-normal text-gray-400">
           {fireDoors.length} door{fireDoors.length === 1 ? '' : 's'}
         </span>
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline normal-case tracking-normal"
+        >
+          <Plus className="w-3 h-3" /> Add door
+        </button>
       </h2>
+      {fireDoors.length === 0 ? (
+        <Card className="!p-4 border-dashed text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            No doors registered for this site yet — add one to start an assessment.
+          </p>
+        </Card>
+      ) : (
       <Card className="!p-0 divide-y divide-gray-100 dark:divide-gray-800">
         {fireDoors.map(d => {
           const latest = latestByDoor.get(d.id)
@@ -396,6 +412,15 @@ function FireDoorsForJobSection({ premisesId }) {
           )
         })}
       </Card>
+      )}
+
+      <AddFireDoorModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        premises={premises}
+        existingDoors={fireDoors}
+        addFireDoor={addFireDoor}
+      />
     </section>
   )
 }
