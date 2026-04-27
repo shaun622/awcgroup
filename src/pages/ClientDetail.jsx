@@ -239,7 +239,13 @@ function PremisesTab({ client }) {
           }
           action={<Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setAddOpen(true)}>Add premises</Button>}
         />
-        <AddPremisesModal open={addOpen} onClose={() => setAddOpen(false)} client={client} addPremises={addPremises} />
+        <AddPremisesModal
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          client={client}
+          addPremises={addPremises}
+          onCreated={(p) => { if (p?.division_slug === 'fire') navigate(`/premises/${p.id}`) }}
+        />
       </>
     )
   }

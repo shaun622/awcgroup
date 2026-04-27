@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { Flame } from 'lucide-react'
 import Modal from './Modal'
 import Input, { Select, TextArea } from './Input'
 import Button from './Button'
@@ -145,6 +146,14 @@ export default function AddPremisesModal({
               )
             })}
           </div>
+          {form.division_slug === 'fire' && !isEdit && (
+            <div className="flex items-start gap-2 mt-2 px-3 py-2 rounded-xl bg-fire-50 dark:bg-fire-950/30 text-fire-700 dark:text-fire-300">
+              <Flame className="w-4 h-4 mt-0.5 shrink-0" />
+              <p className="text-xs">
+                After saving, you'll be able to register the building's fire doors and run BS&nbsp;8214 assessments against each one.
+              </p>
+            </div>
+          )}
         </div>
 
         <Input
