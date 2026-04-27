@@ -24,6 +24,7 @@ const FREQUENCIES = [
   { value: 'quarterly',  label: 'Every 3 months' },
   { value: 'biannual',   label: 'Every 6 months' },
   { value: 'annual',     label: 'Every year' },
+  { value: 'custom',     label: 'Custom (days)…' },
 ]
 
 const ADD_SENTINEL = '__add__'
@@ -55,6 +56,7 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
   const [staffId, setStaffId] = useState('')
   const [repeats, setRepeats] = useState(false)
   const [frequency, setFrequency] = useState('monthly')
+  const [frequencyDays, setFrequencyDays] = useState('')
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
 
@@ -67,7 +69,7 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
     setTemplateId('')
     setTitle(''); setDescription(''); setDuration(''); setPrice('')
     setStaffId('')
-    setRepeats(false); setFrequency('monthly')
+    setRepeats(false); setFrequency('monthly'); setFrequencyDays('')
     setErrors({}); setSaving(false)
     // default scheduled date = today
     const d = new Date()
@@ -130,12 +132,21 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
       // can stamp the new job with recurring_profile_id.
       let profileId = null
       if (repeats) {
+        const isCustom = frequency === 'custom'
+        if (isCustom && (!frequencyDays || Number(frequencyDays) <= 0)) {
+          setErrors(e => ({ ...e, frequencyDays: 'Enter a number of days' }))
+          setSaving(false)
+          return
+        }
         const profile = await createProfile({
           division_slug: divisionSlug,
           client_id: clientId,
           premises_id: premisesId || null,
           title: title.trim(),
-          frequency,
+          // Custom intervals store as 'monthly' enum + a frequency_days override
+          // so the schedule projection still has a defined cadence.
+          frequency: isCustom ? 'monthly' : frequency,
+          frequency_days: isCustom ? Number(frequencyDays) : null,
           start_date: scheduledDate || new Date().toISOString().slice(0, 10),
           duration_type: 'ongoing',
           assigned_staff_id: staffId || null,
@@ -350,10 +361,27 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
             </div>
           </label>
           {repeats && (
-            <div className="ml-7 max-w-xs animate-slide-down">
-              <Select label="Frequency" value={frequency} onChange={e => setFrequency(e.target.value)}>
-                {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-              </Select>
+            <div className="ml-7 space-y-3">
+              <div className="max-w-xs">
+                <Select label="Frequency" value={frequency} onChange={e => setFrequency(e.target.value)}>
+                  {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </Select>
+              </div>
+              {frequency === 'custom' && (
+                <div className="max-w-xs">
+                  <Input
+                    label="Every N days"
+                    type="number"
+                    min="1"
+                    max="3650"
+                    step="1"
+                    value={frequencyDays}
+                    onChange={e => setFrequencyDays(e.target.value)}
+                    error={errors.frequencyDays}
+                    placeholder="e.g. 21"
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

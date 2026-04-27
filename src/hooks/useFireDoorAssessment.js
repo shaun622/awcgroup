@@ -223,10 +223,12 @@ async function bumpNextDue(fireDoorId) {
     .eq('id', fireDoorId).maybeSingle()
   if (!door) return
 
-  let frequency = door.reinspection_frequency
-  if (!frequency) {
+  let days
+  if (door.reinspection_frequency) {
+    days = FREQUENCY_DAYS[door.reinspection_frequency]
+  } else {
     const { data: profile } = await supabase
-      .from('recurring_profiles').select('frequency')
+      .from('recurring_profiles').select('frequency, frequency_days')
       .eq('premises_id', door.premises_id)
       .eq('profile_type', 'fire_door_inspection')
       .is('fire_door_id', null)
@@ -234,10 +236,10 @@ async function bumpNextDue(fireDoorId) {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    frequency = profile?.frequency
+    if (profile?.frequency_days) days = profile.frequency_days
+    else if (profile?.frequency) days = FREQUENCY_DAYS[profile.frequency]
   }
-  if (!frequency) return
-  const days = FREQUENCY_DAYS[frequency] ?? 365
+  if (!days) return
   const next = new Date(Date.now() + days * 86400_000).toISOString()
   await supabase.from('fire_doors').update({ next_due_at: next }).eq('id', fireDoorId)
 }

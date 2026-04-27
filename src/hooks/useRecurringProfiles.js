@@ -65,6 +65,7 @@ export function useRecurringProfiles({ clientId, premisesId, divisionSlug, statu
       duration_minutes: payload.duration_minutes ?? null,
       profile_type: payload.profile_type ?? 'job',
       fire_door_id: payload.fire_door_id ?? null,
+      frequency_days: payload.frequency_days ?? null,
     }
     const { data, error } = await supabase.from('recurring_profiles').insert(row).select().single()
     if (error) throw error
@@ -112,14 +113,19 @@ export function projectNextVisit(profile) {
   if (profile.status && profile.status !== 'active') return null
   const d = new Date(profile.start_date + 'T00:00:00')
   const n = profile.completed_visits ?? 0
-  switch (profile.frequency) {
-    case 'weekly':     d.setDate(d.getDate() + n * 7); break
-    case 'fortnightly':d.setDate(d.getDate() + n * 14); break
-    case 'monthly':    d.setMonth(d.getMonth() + n); break
-    case 'quarterly':  d.setMonth(d.getMonth() + n * 3); break
-    case 'biannual':   d.setMonth(d.getMonth() + n * 6); break
-    case 'annual':     d.setFullYear(d.getFullYear() + n); break
-    default: return null
+  // Custom interval (in days) overrides the named frequency when set.
+  if (profile.frequency_days && profile.frequency_days > 0) {
+    d.setDate(d.getDate() + n * profile.frequency_days)
+  } else {
+    switch (profile.frequency) {
+      case 'weekly':     d.setDate(d.getDate() + n * 7); break
+      case 'fortnightly':d.setDate(d.getDate() + n * 14); break
+      case 'monthly':    d.setMonth(d.getMonth() + n); break
+      case 'quarterly':  d.setMonth(d.getMonth() + n * 3); break
+      case 'biannual':   d.setMonth(d.getMonth() + n * 6); break
+      case 'annual':     d.setFullYear(d.getFullYear() + n); break
+      default: return null
+    }
   }
   // Check duration_type bounds
   if (profile.duration_type === 'until_date' && profile.end_date && d > new Date(profile.end_date)) return null
