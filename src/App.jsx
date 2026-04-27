@@ -10,6 +10,8 @@ import Dashboard from './pages/Dashboard'
 import Schedule from './pages/Schedule'
 import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
+import PremisesDetail from './pages/PremisesDetail'
+import FireDoorDetail from './pages/FireDoorDetail'
 import Jobs from './pages/Jobs'
 import JobDetail from './pages/JobDetail'
 import NewJobReport from './pages/NewJobReport'
@@ -45,6 +47,8 @@ export default function App() {
             <Route path="/schedule"   element={<Schedule />} />
             <Route path="/clients"     element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
+            <Route path="/premises/:id" element={<PremisesDetail />} />
+            <Route path="/premises/:premisesId/doors/:doorId" element={<FireDoorDetail />} />
             <Route path="/jobs"        element={<Jobs />} />
             <Route path="/jobs/:id"         element={<JobDetail />} />
             <Route path="/jobs/:id/report"  element={<NewJobReport />} />

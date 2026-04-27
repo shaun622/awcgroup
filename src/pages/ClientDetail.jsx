@@ -200,6 +200,7 @@ function OverviewTab({ client }) {
 /* ──────────────────────────────────────────────────────────────────────── */
 
 function PremisesTab({ client }) {
+  const navigate = useNavigate()
   const { premises, loading, addPremises, updatePremises, deletePremises } = usePremises({ clientId: client.id })
   const { currentDivision, isGroupView } = useDivision()
   const [addOpen, setAddOpen] = useState(false)
@@ -267,7 +268,15 @@ function PremisesTab({ client }) {
                   <span className="text-xs text-gray-500">{list.length}</span>
                 </div>
                 <div className="space-y-3">
-                  {list.map(p => <PremisesCard key={p.id} premises={p} onEdit={() => setEditing(p)} onDelete={() => setDeleting(p)} />)}
+                  {list.map(p => (
+                    <PremisesCard
+                      key={p.id}
+                      premises={p}
+                      onClick={() => navigate(`/premises/${p.id}`)}
+                      onEdit={() => setEditing(p)}
+                      onDelete={() => setDeleting(p)}
+                    />
+                  ))}
                 </div>
               </div>
             )
@@ -275,7 +284,15 @@ function PremisesTab({ client }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {shown.map(p => <PremisesCard key={p.id} premises={p} onEdit={() => setEditing(p)} onDelete={() => setDeleting(p)} />)}
+          {shown.map(p => (
+            <PremisesCard
+              key={p.id}
+              premises={p}
+              onClick={() => navigate(`/premises/${p.id}`)}
+              onEdit={() => setEditing(p)}
+              onDelete={() => setDeleting(p)}
+            />
+          ))}
         </div>
       )}
 
@@ -302,11 +319,11 @@ function PremisesTab({ client }) {
   )
 }
 
-function PremisesCard({ premises, onEdit, onDelete }) {
+function PremisesCard({ premises, onClick, onEdit, onDelete }) {
   const addr = [premises.address_line_1, premises.address_line_2, premises.city, premises.postcode].filter(Boolean).join(', ')
   const div = getDivision(premises.division_slug)
   return (
-    <Card>
+    <Card onClick={onClick}>
       <div className="flex items-start gap-3">
         <DivisionDot slug={premises.division_slug} className="mt-1.5" />
         <div className="flex-1 min-w-0">
