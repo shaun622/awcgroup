@@ -13,8 +13,18 @@ import { useClients } from '../../hooks/useClients'
 import { usePremises } from '../../hooks/usePremises'
 import { useJobTypeTemplates } from '../../hooks/useJobTypeTemplates'
 import { useStaff } from '../../hooks/useStaff'
+import { useRecurringProfiles } from '../../hooks/useRecurringProfiles'
 import { getDivision } from '../../lib/divisionRegistry'
 import { cn } from '../../lib/utils'
+
+const FREQUENCIES = [
+  { value: 'weekly',     label: 'Every week' },
+  { value: 'fortnightly',label: 'Every 2 weeks' },
+  { value: 'monthly',    label: 'Every month' },
+  { value: 'quarterly',  label: 'Every 3 months' },
+  { value: 'biannual',   label: 'Every 6 months' },
+  { value: 'annual',     label: 'Every year' },
+]
 
 const ADD_SENTINEL = '__add__'
 
@@ -43,6 +53,8 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
   const [duration, setDuration] = useState('')
   const [price, setPrice] = useState('')
   const [staffId, setStaffId] = useState('')
+  const [repeats, setRepeats] = useState(false)
+  const [frequency, setFrequency] = useState('monthly')
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
 
@@ -55,6 +67,7 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
     setTemplateId('')
     setTitle(''); setDescription(''); setDuration(''); setPrice('')
     setStaffId('')
+    setRepeats(false); setFrequency('monthly')
     setErrors({}); setSaving(false)
     // default scheduled date = today
     const d = new Date()
@@ -69,6 +82,7 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
   })
   const { templates, createTemplate } = useJobTypeTemplates(divisionSlug)
   const { staff } = useStaff({ divisionSlug })
+  const { createProfile } = useRecurringProfiles({ divisionSlug })
 
   // Inline-add modals triggered by the __add__ sentinel on each picker
   const [addClientOpen, setAddClientOpen] = useState(false)
@@ -112,6 +126,25 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
         ? new Date(`${scheduledDate}T${scheduledTime || '09:00'}:00`).toISOString()
         : null
 
+      // If "Repeat this job" is on, create the recurring profile first so we
+      // can stamp the new job with recurring_profile_id.
+      let profileId = null
+      if (repeats) {
+        const profile = await createProfile({
+          division_slug: divisionSlug,
+          client_id: clientId,
+          premises_id: premisesId || null,
+          title: title.trim(),
+          frequency,
+          start_date: scheduledDate || new Date().toISOString().slice(0, 10),
+          duration_type: 'ongoing',
+          assigned_staff_id: staffId || null,
+          price: price ? Number(price) : null,
+          duration_minutes: duration ? Number(duration) : null,
+        })
+        profileId = profile.id
+      }
+
       const job = await createJob({
         division_slug: divisionSlug,
         client_id: clientId,
@@ -123,8 +156,9 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
         scheduled_duration_minutes: duration ? Number(duration) : null,
         assigned_staff_id: staffId || null,
         price: price ? Number(price) : null,
+        recurring_profile_id: profileId,
       })
-      toast.success('Job scheduled', { description: job.title })
+      toast.success(repeats ? 'Recurring job scheduled' : 'Job scheduled', { description: job.title })
       onClose?.()
       onCreated?.(job)
     } catch (err) {
@@ -297,6 +331,31 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
             value={price}
             onChange={e => setPrice(e.target.value)}
           />
+        </div>
+
+        {/* Recurring toggle */}
+        <div className="space-y-2">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={repeats}
+              onChange={e => setRepeats(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded accent-brand-500"
+            />
+            <div>
+              <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Repeat this job</span>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Creates an ongoing schedule — the next visit is auto-projected onto the calendar after each completion.
+              </p>
+            </div>
+          </label>
+          {repeats && (
+            <div className="ml-7 max-w-xs animate-slide-down">
+              <Select label="Frequency" value={frequency} onChange={e => setFrequency(e.target.value)}>
+                {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </Select>
+            </div>
+          )}
         </div>
 
         <Select

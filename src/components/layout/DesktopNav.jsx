@@ -7,7 +7,6 @@ const TABS = [
   { path: '/schedule',  label: 'Schedule',  icon: CalendarDays },
   { path: '/clients',   label: 'Clients',   icon: Users },
   { path: '/jobs',      label: 'Jobs',      icon: Briefcase },
-  { path: '/recurring', label: 'Recurring', icon: Repeat },
   { path: '/quotes',    label: 'Quotes',    icon: Receipt },
   { path: '/invoices',  label: 'Invoices',  icon: FileText },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },

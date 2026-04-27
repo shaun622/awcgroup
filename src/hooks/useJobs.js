@@ -84,6 +84,7 @@ export function useJobs({ clientId, premisesId, divisionSlug, status } = {}) {
       scheduled_duration_minutes: payload.scheduled_duration_minutes ?? null,
       assigned_staff_id: payload.assigned_staff_id || null,
       price: payload.price ?? null,
+      recurring_profile_id: payload.recurring_profile_id || null,
     }
     const { data, error } = await supabase.from('jobs').insert(row).select().single()
     if (error) throw error
