@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Flame, Check, X, Minus, ChevronDown, ChevronUp, Camera, Trash2,
-  AlertTriangle, ClipboardCheck, Save, ShieldCheck, Loader2,
+  AlertTriangle, ClipboardCheck, Save, ShieldCheck, Loader2, Download,
 } from 'lucide-react'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
@@ -60,8 +60,25 @@ export default function FireDoorAssessment() {
   const [completing, setCompleting] = useState(false)
   const [bulkOpen, setBulkOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const readOnly = assessment?.status === 'completed'
+
+  // ── PDF export (completed only) ──────────────────────────────────────
+  const onExportPdf = async () => {
+    if (!assessment || !door) return
+    setExporting(true)
+    try {
+      const { generateDoorReportPdf, downloadPdf } = await import('../lib/fireDoorReportPdf')
+      const blob = await generateDoorReportPdf({ door, premises, client: null, business, assessment })
+      const dateStr = (assessment.assessed_at ?? '').slice(0, 10)
+      downloadPdf(blob, `Fire-door-report-${door.ref}-${dateStr}.pdf`.replace(/\s+/g, '-'))
+    } catch (err) {
+      toast.error('PDF export failed', { description: err.message })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   // ── hydrate from existing assessment ─────────────────────────────────
   useEffect(() => {
@@ -287,11 +304,24 @@ export default function FireDoorAssessment() {
               {door.location && ` · ${door.location}`}
             </p>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
-              {roll.answered}<span className="text-gray-400">/{TOTAL_ITEMS}</span>
-            </p>
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-gray-500">items</p>
+          <div className="text-right shrink-0 flex items-start gap-2">
+            <div>
+              <p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
+                {roll.answered}<span className="text-gray-400">/{TOTAL_ITEMS}</span>
+              </p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-gray-500">items</p>
+            </div>
+            {readOnly && (
+              <Button
+                size="sm"
+                variant="secondary"
+                leftIcon={<Download className="w-3.5 h-3.5" />}
+                onClick={onExportPdf}
+                loading={exporting}
+              >
+                PDF
+              </Button>
+            )}
           </div>
         </div>
 

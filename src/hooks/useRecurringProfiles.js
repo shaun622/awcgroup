@@ -63,6 +63,8 @@ export function useRecurringProfiles({ clientId, premisesId, divisionSlug, statu
       assigned_staff_id: payload.assigned_staff_id || null,
       price: payload.price ?? null,
       duration_minutes: payload.duration_minutes ?? null,
+      profile_type: payload.profile_type ?? 'job',
+      fire_door_id: payload.fire_door_id ?? null,
     }
     const { data, error } = await supabase.from('recurring_profiles').insert(row).select().single()
     if (error) throw error

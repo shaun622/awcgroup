@@ -118,7 +118,9 @@ export function useSchedule({ divisionSlug } = {}) {
           client_id: r.client_id,
           price: r.price,
           duration_minutes: r.duration_minutes,
-          href: '/recurring',
+          href: r.profile_type === 'fire_door_inspection' && r.premises_id
+            ? `/premises/${r.premises_id}`
+            : '/recurring',
         }
       })
       .filter(Boolean))
