@@ -40,7 +40,7 @@ const ADD_SENTINEL = '__add__'
  *   onCreated(job)              optional: after success (defaults to nothing)
  */
 export default function NewJobModal({ open, onClose, client: lockedClient, premises: lockedPremises, createJob, onCreated }) {
-  const { currentDivision, available } = useDivision()
+  const { currentDivision, available, isGroupView } = useDivision()
   const defaultDivision = lockedPremises?.division_slug ?? currentDivision?.slug ?? available[0]?.slug ?? 'pest'
 
   const [divisionSlug, setDivisionSlug] = useState(defaultDivision)
@@ -182,8 +182,9 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
   return (
     <Modal open={open} onClose={() => onClose?.()} title="Schedule job" description="Fill in as little or as much as you like — you can edit later." size="md">
       <form onSubmit={submit} className="space-y-4">
-        {/* Division picker */}
-        {!lockedPremises && (
+        {/* Division picker — only shown in Group view, since otherwise the
+            user is already scoped to one division by the top nav switcher. */}
+        {!lockedPremises && isGroupView && (
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Division</label>
             <div className="flex flex-wrap gap-2">
