@@ -40,16 +40,11 @@ export default function Schedule() {
 
   return (
     <PageWrapper size="xl">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Schedule</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {isGroupView ? 'All divisions' : currentDivision?.name}
-          </p>
-        </div>
-        <Button onClick={() => setAddOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
-          Schedule job
-        </Button>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Schedule</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          {isGroupView ? 'All divisions' : currentDivision?.name}
+        </p>
       </div>
 
       <FilterChips

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   ArrowLeft, ClipboardList, Camera, FileText, CheckCircle2, Check, X, Upload, Trash2, Loader2,
+  Flame, ShieldCheck, ChevronRight,
 } from 'lucide-react'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
@@ -11,8 +12,10 @@ import { TextArea } from '../components/ui/Input'
 import DynamicField from '../components/ui/DynamicField'
 import DivisionChip from '../components/ui/DivisionChip'
 import { SkeletonCard } from '../components/ui/Skeleton'
+import Badge from '../components/ui/Badge'
 import { useJob, useJobs } from '../hooks/useJobs'
 import { useJobReport } from '../hooks/useJobReport'
+import { useFireDoors } from '../hooks/useFireDoors'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useBusiness } from '../contexts/BusinessContext'
@@ -166,6 +169,11 @@ export default function NewJobReport() {
         </p>
       )}
 
+      {/* Fire-door assessments — only for fire-division jobs at premises with registered doors */}
+      {job.division_slug === 'fire' && job.premises_id && (
+        <FireDoorsForJobSection premisesId={job.premises_id} />
+      )}
+
       {/* Tasks */}
       {tasks.length > 0 && (
         <section className="mt-5">
@@ -308,5 +316,86 @@ export default function NewJobReport() {
         </Button>
       </div>
     </PageWrapper>
+  )
+}
+
+/* ─── Fire-door assessment bridge (fire-division jobs only) ─────────── */
+
+function FireDoorsForJobSection({ premisesId }) {
+  const navigate = useNavigate()
+  const { business } = useBusiness()
+  const { fireDoors, loading } = useFireDoors({ premisesId })
+  const [latestByDoor, setLatestByDoor] = useState(new Map())
+
+  useEffect(() => {
+    if (!business || fireDoors.length === 0) { setLatestByDoor(new Map()); return }
+    let alive = true
+    ;(async () => {
+      const { data } = await supabase
+        .from('fire_door_assessments')
+        .select('id, fire_door_id, status, outcome, assessed_at')
+        .eq('business_id', business.id)
+        .in('fire_door_id', fireDoors.map(d => d.id))
+        .order('assessed_at', { ascending: false })
+      if (!alive) return
+      const map = new Map()
+      for (const a of data ?? []) {
+        if (!map.has(a.fire_door_id)) map.set(a.fire_door_id, a)
+      }
+      setLatestByDoor(map)
+    })()
+    return () => { alive = false }
+  }, [business, fireDoors])
+
+  if (loading || fireDoors.length === 0) return null
+
+  return (
+    <section className="mt-5">
+      <h2 className="section-title mb-2 flex items-center gap-2">
+        <Flame className="w-3.5 h-3.5 text-fire-500" /> Fire doors at this site
+        <span className="ml-auto text-[11px] normal-case font-normal tracking-normal text-gray-400">
+          {fireDoors.length} door{fireDoors.length === 1 ? '' : 's'}
+        </span>
+      </h2>
+      <Card className="!p-0 divide-y divide-gray-100 dark:divide-gray-800">
+        {fireDoors.map(d => {
+          const latest = latestByDoor.get(d.id)
+          const inProgress = latest?.status === 'in_progress'
+          const outcome = latest?.outcome
+          return (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => navigate(
+                inProgress
+                  ? `/premises/${premisesId}/doors/${d.id}/assess/${latest.id}`
+                  : `/premises/${premisesId}/doors/${d.id}/assess/new`
+              )}
+              className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors first:rounded-t-2xl last:rounded-b-2xl"
+            >
+              <div className="w-9 h-9 rounded-xl bg-fire-50 dark:bg-fire-950/40 text-fire-600 dark:text-fire-400 flex items-center justify-center shrink-0">
+                <Flame className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{d.ref}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {[d.location, d.floor && `Floor ${d.floor}`].filter(Boolean).join(' · ') || '—'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {inProgress
+                  ? <Badge variant="warning">Resume</Badge>
+                  : outcome
+                    ? <Badge variant={outcome === 'pass' ? 'success' : outcome === 'fail' ? 'danger' : 'warning'}>
+                        Last: {outcome === 'pass' ? 'Pass' : outcome === 'fail' ? 'Fail' : 'Investig.'}
+                      </Badge>
+                    : <Badge variant="default">Not assessed</Badge>}
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </div>
+            </button>
+          )
+        })}
+      </Card>
+    </section>
   )
 }
