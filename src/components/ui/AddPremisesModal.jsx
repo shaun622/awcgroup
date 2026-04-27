@@ -52,11 +52,13 @@ export default function AddPremisesModal({
   editing,
   onCreated,
   zLayer,
+  defaultDivision: propDefaultDivision,
 }) {
   const isEdit = !!editing
   const { currentDivision, available } = useDivision()
-  // Default to active division if not Group view, else first available
-  const defaultDivision = currentDivision?.slug ?? available[0]?.slug ?? 'pest'
+  // Caller can force a default (e.g. 'fire' when opened from the fire-doors flow);
+  // otherwise fall back to the user's active division.
+  const defaultDivision = propDefaultDivision ?? currentDivision?.slug ?? available[0]?.slug ?? 'pest'
   const [form, setForm] = useState(() => fromRecord(editing) ?? emptyForm(defaultDivision))
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)

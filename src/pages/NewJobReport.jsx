@@ -14,9 +14,11 @@ import DivisionChip from '../components/ui/DivisionChip'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import Badge from '../components/ui/Badge'
 import AddFireDoorModal from '../components/ui/AddFireDoorModal'
+import AddPremisesModal from '../components/ui/AddPremisesModal'
 import { useJob, useJobs } from '../hooks/useJobs'
 import { useJobReport } from '../hooks/useJobReport'
 import { useFireDoors } from '../hooks/useFireDoors'
+import { usePremises } from '../hooks/usePremises'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useBusiness } from '../contexts/BusinessContext'
@@ -28,8 +30,8 @@ const PHOTO_TAGS = ['before', 'during', 'after', 'defect', 'evidence']
 export default function NewJobReport() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { job, client, premises, staff, loading: jobLoading } = useJob(id)
-  const { updateJobStatus } = useJobs()
+  const { job, client, premises, staff, loading: jobLoading, refetch: refetchJob } = useJob(id)
+  const { updateJobStatus, updateJob } = useJobs()
   const { user } = useAuth()
   const { business } = useBusiness()
   const {
@@ -170,9 +172,18 @@ export default function NewJobReport() {
         </p>
       )}
 
-      {/* Fire-door assessments — only for fire-division jobs at premises with registered doors */}
-      {job.division_slug === 'fire' && job.premises_id && (
-        <FireDoorsForJobSection premisesId={job.premises_id} premises={premises} />
+      {/* Fire-door assessments — fire-division only. Doors are not a concept
+          in the other divisions, so this section never renders for pest /
+          hygiene / locksmith jobs. */}
+      {job.division_slug === 'fire' && (
+        <FireDoorsForJobSection
+          premisesId={job.premises_id}
+          premises={premises}
+          job={job}
+          client={client}
+          updateJob={updateJob}
+          onPremisesAttached={refetchJob}
+        />
       )}
 
       {/* Tasks */}
@@ -322,7 +333,71 @@ export default function NewJobReport() {
 
 /* ─── Fire-door assessment bridge (fire-division jobs only) ─────────── */
 
-function FireDoorsForJobSection({ premisesId, premises }) {
+function FireDoorsForJobSection({ premisesId, premises, job, client, updateJob, onPremisesAttached }) {
+  // No premises attached → render the "attach a premises first" prompt and
+  // skip all door fetching. Once a premises is attached, the parent refetches
+  // the job and this remounts in its with-doors variant.
+  if (!premisesId) {
+    return <NoPremisesPrompt job={job} client={client} updateJob={updateJob} onPremisesAttached={onPremisesAttached} />
+  }
+  return <DoorsForJobPanel premisesId={premisesId} premises={premises} />
+}
+
+function NoPremisesPrompt({ job, client, updateJob, onPremisesAttached }) {
+  const { addPremises } = usePremises({ clientId: client?.id })
+  const [open, setOpen] = useState(false)
+  const [attaching, setAttaching] = useState(false)
+
+  return (
+    <section className="mt-5">
+      <h2 className="section-title mb-2 flex items-center gap-2">
+        <Flame className="w-3.5 h-3.5 text-fire-500" /> Fire doors at this site
+      </h2>
+      <Card className="!p-4 border-dashed">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-fire-50 dark:bg-fire-950/40 text-fire-600 dark:text-fire-400 flex items-center justify-center shrink-0">
+            <Flame className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">No premises on this job yet</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Add the building this job is at, then you can register fire doors against it.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            leftIcon={<Plus className="w-3.5 h-3.5" />}
+            onClick={() => setOpen(true)}
+            disabled={!client || attaching}
+            loading={attaching}
+          >
+            Add premises
+          </Button>
+        </div>
+      </Card>
+
+      <AddPremisesModal
+        open={open}
+        onClose={() => setOpen(false)}
+        client={client}
+        addPremises={addPremises}
+        defaultDivision="fire"
+        onCreated={async (created) => {
+          setAttaching(true)
+          try {
+            await updateJob(job.id, { premises_id: created.id })
+            await onPremisesAttached?.()
+          } finally {
+            setAttaching(false)
+            setOpen(false)
+          }
+        }}
+      />
+    </section>
+  )
+}
+
+function DoorsForJobPanel({ premisesId, premises }) {
   const navigate = useNavigate()
   const { business } = useBusiness()
   const { fireDoors, loading, addFireDoor } = useFireDoors({ premisesId })
