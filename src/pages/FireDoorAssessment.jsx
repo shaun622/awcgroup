@@ -620,9 +620,9 @@ function ChecklistRow({ item, response, readOnly, onSetResult, onSetNote, onUplo
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <ResultButton kind="pass" active={result === 'pass'} disabled={readOnly} onClick={() => onSetResult('pass')} />
-          <ResultButton kind="fail" active={result === 'fail'} disabled={readOnly} onClick={() => onSetResult('fail')} />
-          <ResultButton kind="na"   active={result === 'na'}   disabled={readOnly} onClick={() => onSetResult('na')} />
+          <ResultButton kind="pass" active={result === 'pass'} disabled={readOnly} onClick={() => onSetResult(result === 'pass' ? null : 'pass')} />
+          <ResultButton kind="fail" active={result === 'fail'} disabled={readOnly} onClick={() => onSetResult(result === 'fail' ? null : 'fail')} />
+          <ResultButton kind="na"   active={result === 'na'}   disabled={readOnly} onClick={() => onSetResult(result === 'na' ? null : 'na')} />
         </div>
       </div>
 
