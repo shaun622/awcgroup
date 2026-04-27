@@ -428,24 +428,33 @@ function DoorsForJobPanel({ premisesId, premises }) {
 
   return (
     <section className="mt-5">
-      <h2 className="section-title mb-2 flex items-center gap-2">
-        <Flame className="w-3.5 h-3.5 text-fire-500" /> Fire doors at this site
-        <span className="ml-auto text-[11px] normal-case font-normal tracking-normal text-gray-400">
+      <div className="mb-2 flex items-center gap-2">
+        <h2 className="section-title flex items-center gap-2">
+          <Flame className="w-3.5 h-3.5 text-fire-500" /> Fire doors at this site
+        </h2>
+        <span className="text-[11px] text-gray-400 tabular-nums">
           {fireDoors.length} door{fireDoors.length === 1 ? '' : 's'}
         </span>
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline normal-case tracking-normal"
-        >
-          <Plus className="w-3 h-3" /> Add door
-        </button>
-      </h2>
+        <div className="ml-auto">
+          <Button size="sm" variant="secondary" leftIcon={<Plus className="w-3.5 h-3.5" />} onClick={() => setAddOpen(true)}>
+            Add door
+          </Button>
+        </div>
+      </div>
       {fireDoors.length === 0 ? (
-        <Card className="!p-4 border-dashed text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            No doors registered for this site yet — add one to start an assessment.
-          </p>
+        <Card className="!p-6 border-dashed flex flex-col items-center text-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-fire-50 dark:bg-fire-950/40 text-fire-600 dark:text-fire-400 flex items-center justify-center">
+            <Flame className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">No doors registered yet</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-xs">
+              Register each door so you can run the BS&nbsp;8214 assessment against it.
+            </p>
+          </div>
+          <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setAddOpen(true)}>
+            Add door
+          </Button>
         </Card>
       ) : (
       <Card className="!p-0 divide-y divide-gray-100 dark:divide-gray-800">
