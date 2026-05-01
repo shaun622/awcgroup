@@ -46,10 +46,15 @@ export default function Clients() {
   useEffect(() => {
     if (!business?.id) return
     let cancelled = false
+    // Scope the rollups to the current division (when not in Group
+    // view) so the Active-jobs / YTD-revenue KPIs and the per-row
+    // Sites + YTD spend match what the operator sees on the Schedule
+    // / Jobs / Invoices pages. Group view aggregates everything.
+    const scope = (q) => divisionSlug ? q.eq('division_slug', divisionSlug) : q
     Promise.all([
-      supabase.from('premises').select('id, client_id').eq('business_id', business.id),
-      supabase.from('jobs').select('id, client_id, status, created_at').eq('business_id', business.id),
-      supabase.from('invoices').select('id, client_id, total, status, created_at').eq('business_id', business.id),
+      scope(supabase.from('premises').select('id, client_id').eq('business_id', business.id)),
+      scope(supabase.from('jobs').select('id, client_id, status, created_at').eq('business_id', business.id)),
+      scope(supabase.from('invoices').select('id, client_id, total, status, created_at').eq('business_id', business.id)),
     ]).then(([prRes, jbRes, invRes]) => {
       if (cancelled) return
       const groupBy = (rows) => {
@@ -66,7 +71,7 @@ export default function Clients() {
       setInvoicesByClient(groupBy(invRes.data))
     })
     return () => { cancelled = true }
-  }, [business?.id, allClients.length])
+  }, [business?.id, allClients.length, divisionSlug])
 
   // ── KPIs ───────────────────────────────────────────────
   const yearStart = useMemo(() => {
