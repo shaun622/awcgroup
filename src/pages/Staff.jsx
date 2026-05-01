@@ -11,12 +11,19 @@ import DivisionChip from '../components/ui/DivisionChip'
 import { SkeletonList } from '../components/ui/Skeleton'
 import AddStaffModal from '../components/ui/AddStaffModal'
 import { useStaff } from '../hooks/useStaff'
+import { useBusiness } from '../contexts/BusinessContext'
 import { statusLabel } from '../lib/utils'
 
 export default function Staff() {
   const navigate = useNavigate()
   const { staff, loading } = useStaff()
+  // staffLimit comes from BusinessContext: businesses.staff_seat_override
+  // (HQ admin override) ?? plans.max_staff for the current plan ?? 1.
+  // One set of seats covers all four AWC divisions.
+  const { staffLimit } = useBusiness()
   const [addOpen, setAddOpen] = useState(false)
+
+  const canAdd = staff.length < staffLimit
 
   return (
     <PageWrapper size="xl">
@@ -30,10 +37,12 @@ export default function Staff() {
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Staff</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{staff.length} {staff.length === 1 ? 'person' : 'people'}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {staff.length} of {staffLimit} {staffLimit === 1 ? 'seat' : 'seats'} used
+          </p>
         </div>
-        <Button onClick={() => setAddOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
-          Add staff
+        <Button onClick={() => setAddOpen(true)} disabled={!canAdd} leftIcon={<Plus className="w-4 h-4" />}>
+          {canAdd ? 'Add staff' : 'Seat limit reached'}
         </Button>
       </div>
 
