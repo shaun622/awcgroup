@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, FileText, Send, Clock, Wallet, ArrowRight, Check } from 'lucide-react'
+import { Plus, FileText, Send, Clock, Wallet, ArrowRight, Check, Briefcase } from 'lucide-react'
 import { toast } from 'sonner'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
@@ -9,8 +9,10 @@ import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonList } from '../components/ui/Skeleton'
 import { DivisionDot } from '../components/ui/DivisionChip'
+import NewJobModal from '../components/ui/NewJobModal'
 import { useQuotes } from '../hooks/useQuotes'
 import { useClients } from '../hooks/useClients'
+import { useJobs } from '../hooks/useJobs'
 import { useDivision } from '../contexts/DivisionContext'
 import { cn, formatDate, formatGBP, statusLabel } from '../lib/utils'
 
@@ -45,12 +47,16 @@ export default function Quotes() {
   // No status filter — we show all and pivot via the table view
   const { quotes, loading, respondToQuote } = useQuotes({ divisionSlug })
   const { allClients } = useClients()
+  const { createJob } = useJobs({ divisionSlug })
   const clientById = useMemo(() => {
     const m = new Map(); allClients.forEach(c => m.set(c.id, c)); return m
   }, [allClients])
 
   const [selectedId, setSelectedId] = useState(null)
   const [acceptingId, setAcceptingId] = useState(null)
+  // The accepted quote we're converting — when set, NewJobModal opens
+  // pre-filled with the quote's division/client/premises/title/total.
+  const [convertingQuote, setConvertingQuote] = useState(null)
 
   // Auto-select first quote on desktop so the detail panel is never empty
   useEffect(() => {
@@ -212,6 +218,7 @@ export default function Quotes() {
                     client={clientById.get(selected.client_id)}
                     navigate={navigate}
                     onAccept={() => handleAccept(selected)}
+                    onConvertToJob={() => setConvertingQuote(selected)}
                     accepting={acceptingId === selected.id}
                   />
                 ) : (
@@ -224,12 +231,28 @@ export default function Quotes() {
           </>
         )}
       </div>
+
+      {/* Convert-to-job modal — opened from the QuoteDetail panel for
+          accepted quotes. NewJobModal accepts a fromQuote prop that
+          pre-fills division/client/premises/title/total and stamps
+          jobs.quote_id so the Jobs board can hide the source quote
+          from the "Accepted quotes" column once converted. */}
+      <NewJobModal
+        open={!!convertingQuote}
+        onClose={() => setConvertingQuote(null)}
+        fromQuote={convertingQuote}
+        createJob={createJob}
+        onCreated={(j) => {
+          setConvertingQuote(null)
+          navigate(`/jobs/${j.id}`)
+        }}
+      />
     </PageWrapper>
   )
 }
 
 // ─── Detail panel ──────────────────────────────────────
-function QuoteDetail({ quote, client, navigate, onAccept, accepting }) {
+function QuoteDetail({ quote, client, navigate, onAccept, onConvertToJob, accepting }) {
   const ref = quote.quote_number || `AW-${String(quote.id).replace(/-/g, '').slice(0, 4).toUpperCase()}`
   const lineItems = Array.isArray(quote.line_items) ? quote.line_items : []
   const canAccept = !['accepted', 'declined', 'expired'].includes(quote.status)
@@ -301,23 +324,38 @@ function QuoteDetail({ quote, client, navigate, onAccept, accepting }) {
       </div>
 
       {/* Footer actions */}
-      <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
+      <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 flex-wrap">
         <button
           onClick={() => navigate(`/quotes/${quote.id}`)}
           className="text-xs font-semibold text-brand-600 dark:text-brand-400 inline-flex items-center gap-1 hover:gap-1.5 transition-all"
         >
           Open quote <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
         </button>
-        {canAccept && onAccept && (
-          <button
-            onClick={onAccept}
-            disabled={accepting}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-brand-600 text-white shadow-button hover:bg-brand-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
-          >
-            <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-            {accepting ? 'Accepting…' : 'Mark accepted'}
-          </button>
-        )}
+        <div className="ml-auto inline-flex items-center gap-1.5">
+          {/* Once a quote is accepted the next operational step is
+              scheduling — surface a Convert-to-job action so the
+              operator doesn't have to hop to the Jobs page and rebuild
+              the context from scratch. */}
+          {quote.status === 'accepted' && onConvertToJob && (
+            <button
+              onClick={onConvertToJob}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white dark:bg-gray-900 border border-brand-300 dark:border-brand-700 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-950/40 transition-colors"
+            >
+              <Briefcase className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Convert to job
+            </button>
+          )}
+          {canAccept && onAccept && (
+            <button
+              onClick={onAccept}
+              disabled={accepting}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-brand-600 text-white shadow-button hover:bg-brand-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+            >
+              <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+              {accepting ? 'Accepting…' : 'Mark accepted'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

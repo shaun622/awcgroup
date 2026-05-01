@@ -102,8 +102,24 @@ export function useInvoices({ clientId, divisionSlug, status } = {}) {
     return data
   }, [])
 
-  const sendInvoice = useCallback(async (id) =>
-    updateInvoice(id, { status: 'sent', sent_at: new Date().toISOString() }), [updateInvoice])
+  // Fire-and-forget email — the send-invoice edge function emails a
+  // branded invoice via Resend and flips the row to 'sent'. If the
+  // function isn't deployed yet (or RESEND_API_KEY isn't configured),
+  // we fall back to a direct status update so the UI still progresses
+  // and the operator isn't blocked. This mirrors useQuotes.sendQuote.
+  const sendInvoice = useCallback(async (id) => {
+    try {
+      const res = await supabase.functions.invoke('send-invoice', { body: { invoice_id: id } })
+      if (res.error) throw res.error
+    } catch (err) {
+      console.warn('[send-invoice] fell back to client-side status update:', err?.message ?? err)
+      return updateInvoice(id, { status: 'sent', sent_at: new Date().toISOString() })
+    }
+    // Local refetch to pick up the row the function updated
+    const { data } = await supabase.from('invoices').select('*').eq('id', id).maybeSingle()
+    if (data) setInvoices(prev => prev.map(i => i.id === data.id ? data : i))
+    return data
+  }, [updateInvoice])
 
   const markPaid = useCallback(async (id, reference) => {
     const data = await updateInvoice(id, { status: 'paid', paid_at: new Date().toISOString(), payment_reference: reference ?? null })

@@ -193,6 +193,7 @@ function StatusActions({ job, onChange, disabled }) {
   } else if (job.status === 'in_progress') {
     btns.push({ label: 'Complete', next: 'completed', variant: 'primary', icon: CheckCircle2 })
     btns.push({ label: 'Put on hold', next: 'on_hold', variant: 'secondary', icon: Pause })
+    btns.push({ label: 'Cancel', next: 'cancelled', variant: 'secondary', icon: XCircle })
   } else if (job.status === 'on_hold') {
     btns.push({ label: 'Resume', next: 'in_progress', variant: 'primary', icon: Play })
     btns.push({ label: 'Cancel', next: 'cancelled', variant: 'secondary', icon: XCircle })

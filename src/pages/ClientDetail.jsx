@@ -16,6 +16,7 @@ import { SkeletonCard, SkeletonList } from '../components/ui/Skeleton'
 import AddPremisesModal from '../components/ui/AddPremisesModal'
 import AddClientModal from '../components/ui/AddClientModal'
 import ConfirmModal from '../components/ui/ConfirmModal'
+import { supabase } from '../lib/supabase'
 import { useClient, useClients } from '../hooks/useClients'
 import { usePremises } from '../hooks/usePremises'
 import { useJobs } from '../hooks/useJobs'
@@ -35,6 +36,14 @@ const TABS = [
   { id: 'activity', label: 'Activity', icon: Activity },
 ]
 
+// Job statuses that "open" — i.e. work the operator may still be on
+// the hook for. Cancelled/completed don't block a delete.
+const OPEN_JOB_STATUSES = ['scheduled', 'in_progress', 'on_hold']
+// Quote statuses where the customer may still respond.
+const OPEN_QUOTE_STATUSES = ['draft', 'sent', 'viewed', 'follow_up']
+// Invoice statuses where money is owed.
+const OPEN_INVOICE_STATUSES = ['draft', 'sent', 'viewed', 'overdue']
+
 export default function ClientDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -43,6 +52,34 @@ export default function ClientDetail() {
   const [tab, setTab] = useState('overview')
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  // Pre-delete summary: counts of open jobs/quotes/invoices so we
+  // can warn before cascade-deleting them via the FK rules.
+  const [deleteSummary, setDeleteSummary] = useState(null)
+  const [deleteChecking, setDeleteChecking] = useState(false)
+
+  async function openDeleteFlow() {
+    setDeleteOpen(true)
+    setDeleteChecking(true)
+    try {
+      const [jobsRes, quotesRes, invRes] = await Promise.all([
+        supabase.from('jobs').select('id, status', { count: 'exact', head: false }).eq('client_id', id).in('status', OPEN_JOB_STATUSES),
+        supabase.from('quotes').select('id, status', { count: 'exact', head: false }).eq('client_id', id).in('status', OPEN_QUOTE_STATUSES),
+        supabase.from('invoices').select('id, status, total', { count: 'exact', head: false }).eq('client_id', id).in('status', OPEN_INVOICE_STATUSES),
+      ])
+      setDeleteSummary({
+        jobs: jobsRes.data?.length ?? 0,
+        quotes: quotesRes.data?.length ?? 0,
+        invoices: invRes.data?.length ?? 0,
+        unpaidTotal: (invRes.data ?? []).reduce((s, i) => s + (Number(i.total) || 0), 0),
+      })
+    } catch (err) {
+      // If the count query fails for any reason, fall back to "nothing
+      // to warn about" rather than blocking the delete entirely.
+      setDeleteSummary({ jobs: 0, quotes: 0, invoices: 0, unpaidTotal: 0 })
+    } finally {
+      setDeleteChecking(false)
+    }
+  }
 
   if (loading) {
     return <PageWrapper size="xl"><SkeletonCard /></PageWrapper>
@@ -89,7 +126,7 @@ export default function ClientDetail() {
                   <Edit3 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => setDeleteOpen(true)}
+                  onClick={openDeleteFlow}
                   className="min-h-tap min-w-tap flex items-center justify-center rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                   aria-label="Delete client"
                   title="Delete client"
@@ -122,10 +159,26 @@ export default function ClientDetail() {
       />
       <ConfirmModal
         open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
+        onClose={() => { setDeleteOpen(false); setDeleteSummary(null) }}
         title={`Delete ${client.name}?`}
-        description="This permanently deletes the client and all their premises, jobs, quotes and invoices. Cannot be undone."
-        confirmLabel="Delete client"
+        description={(() => {
+          if (deleteChecking || !deleteSummary) return 'Checking for open work…'
+          const { jobs, quotes, invoices, unpaidTotal } = deleteSummary
+          const hasOpenWork = jobs + quotes + invoices > 0
+          if (!hasOpenWork) {
+            return 'This permanently deletes the client and all their premises (no open jobs / quotes / invoices). Cannot be undone.'
+          }
+          const parts = []
+          if (jobs > 0) parts.push(`${jobs} open job${jobs === 1 ? '' : 's'}`)
+          if (quotes > 0) parts.push(`${quotes} open quote${quotes === 1 ? '' : 's'}`)
+          if (invoices > 0) {
+            const fmt = unpaidTotal ? new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(unpaidTotal) : null
+            parts.push(`${invoices} unpaid invoice${invoices === 1 ? '' : 's'}${fmt ? ` (${fmt})` : ''}`)
+          }
+          return `Heads up: this client has ${parts.join(', ')}. Deleting will cascade-remove all of them along with the client's premises. Consider cancelling or marking complete first.`
+        })()}
+        confirmLabel={(deleteSummary && (deleteSummary.jobs + deleteSummary.quotes + deleteSummary.invoices) > 0) ? 'Delete anyway' : 'Delete client'}
+        destructive
         onConfirm={async () => {
           await deleteClient(client.id)
           toast.success('Client deleted')

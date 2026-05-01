@@ -85,6 +85,10 @@ export function useJobs({ clientId, premisesId, divisionSlug, status } = {}) {
       assigned_staff_id: payload.assigned_staff_id || null,
       price: payload.price ?? null,
       recurring_profile_id: payload.recurring_profile_id || null,
+      // quote_id is set when the job is converted from an accepted
+      // quote — keeps the link so the Jobs board's "Accepted quotes"
+      // column can hide the quote once it has a job.
+      quote_id: payload.quote_id || null,
     }
     const { data, error } = await supabase.from('jobs').insert(row).select().single()
     if (error) throw error

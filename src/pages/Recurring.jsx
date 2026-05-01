@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Repeat, Plus, Pause, Play, XCircle, CalendarClock, User } from 'lucide-react'
+import { Repeat, Plus, Pause, Play, XCircle, CalendarClock, User, CalendarPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
@@ -14,6 +14,7 @@ import NewRecurringProfileModal from '../components/ui/NewRecurringProfileModal'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import { useRecurringProfiles, projectNextVisit } from '../hooks/useRecurringProfiles'
 import { useClients } from '../hooks/useClients'
+import { useJobs } from '../hooks/useJobs'
 import { useDivision } from '../contexts/DivisionContext'
 import { cn, formatDate, formatGBP, statusLabel, statusVariant } from '../lib/utils'
 
@@ -33,12 +34,52 @@ export default function Recurring() {
   const [addOpen, setAddOpen] = useState(false)
   const [deleting, setDeleting] = useState(null)
 
-  const { profiles, loading, createProfile, pauseProfile, resumeProfile, cancelProfile, deleteProfile } = useRecurringProfiles({
+  const { profiles, loading, createProfile, updateProfile, pauseProfile, resumeProfile, cancelProfile, deleteProfile } = useRecurringProfiles({
     divisionSlug,
     status: filter === 'all' ? undefined : filter,
   })
   const { allClients } = useClients()
+  const { createJob } = useJobs({ divisionSlug })
   const clientById = useMemo(() => { const m = new Map(); allClients.forEach(c => m.set(c.id, c)); return m }, [allClients])
+  const [generatingId, setGeneratingId] = useState(null)
+
+  // Materialise the next projected visit for `profile` as a real job
+  // and bump the profile's completed_visits counter so the projection
+  // moves forward to the visit after that. (The counter is named after
+  // completion but practically counts scheduled-or-completed visits —
+  // it's the input projectNextVisit uses, so incrementing here is what
+  // makes the projection advance.)
+  async function handleGenerateNext(profile) {
+    const next = projectNextVisit(profile)
+    if (!next) {
+      toast.error('No next visit to generate', { description: 'Profile is paused, completed, or past its end date.' })
+      return
+    }
+    setGeneratingId(profile.id)
+    try {
+      const job = await createJob({
+        division_slug: profile.division_slug,
+        client_id: profile.client_id,
+        premises_id: profile.premises_id,
+        title: profile.title,
+        description: profile.notes,
+        scheduled_date: next.toISOString(),
+        scheduled_duration_minutes: profile.duration_minutes ?? null,
+        assigned_staff_id: profile.assigned_staff_id,
+        price: profile.price ?? null,
+        recurring_profile_id: profile.id,
+      })
+      await updateProfile(profile.id, { completed_visits: (profile.completed_visits ?? 0) + 1 })
+      toast.success(`Visit scheduled for ${formatDate(next)}`, {
+        description: 'Bumped the profile counter — next projection moves forward.',
+      })
+      navigate(`/jobs/${job.id}`)
+    } catch (err) {
+      toast.error('Could not generate visit', { description: err.message })
+    } finally {
+      setGeneratingId(null)
+    }
+  }
 
   return (
     <PageWrapper size="xl">
@@ -93,6 +134,16 @@ export default function Recurring() {
                       {p.price != null && <span className="tabular-nums font-medium text-gray-900 dark:text-gray-100">{formatGBP(p.price)} / visit</span>}
                     </div>
                     <div className="mt-3 flex gap-2 flex-wrap">
+                      {p.status === 'active' && next && (
+                        <Button
+                          size="sm"
+                          leftIcon={<CalendarPlus className="w-3.5 h-3.5" />}
+                          loading={generatingId === p.id}
+                          onClick={() => handleGenerateNext(p)}
+                        >
+                          Generate next visit
+                        </Button>
+                      )}
                       {p.status === 'active' && (
                         <Button size="sm" variant="secondary" leftIcon={<Pause className="w-3.5 h-3.5" />} onClick={() => pauseProfile(p.id).then(() => toast.success('Paused'))}>Pause</Button>
                       )}

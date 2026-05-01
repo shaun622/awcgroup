@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Briefcase, Plus, CalendarClock, LayoutGrid, List as ListIcon, Pause, Receipt,
+  Briefcase, Plus, CalendarClock, LayoutGrid, List as ListIcon, Pause, Receipt, ArrowRight,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
@@ -251,6 +252,11 @@ function PipelineView({ jobs, acceptedQuotes, clientById, premisesById, onOpenJo
                     tinted={col.tinted}
                     onHold={job.status === 'on_hold'}
                     onClick={() => onOpenJob(job)}
+                    // On the "Done · awaiting invoice" column, surface
+                    // a one-click invoice shortcut that goes straight
+                    // to InvoiceBuilder pre-filled from the job (the
+                    // builder already handles ?from=job:ID).
+                    invoiceHref={col.key === 'done' ? `/invoices/new?from=job:${job.id}` : null}
                   />
                 )
               })
@@ -262,12 +268,19 @@ function PipelineView({ jobs, acceptedQuotes, clientById, premisesById, onOpenJo
   )
 }
 
-function PipelineCard({ refCode, title, clientName, divisionSlug, primary, secondary, tinted, onHold, onClick }) {
+function PipelineCard({ refCode, title, clientName, divisionSlug, primary, secondary, tinted, onHold, onClick, invoiceHref }) {
+  // Use a div+role=button instead of <button> so we can nest a Link
+  // for the optional invoice shortcut without invalid HTML (button-in-
+  // button). Stop-propagation on the Link prevents the outer card
+  // click from firing.
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.() }}
       className={cn(
-        'w-full text-left rounded-2xl border p-3 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover',
+        'w-full text-left rounded-2xl border p-3 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover cursor-pointer',
         tinted
           ? 'bg-brand-50/60 border-brand-200/60 dark:bg-brand-950/30 dark:border-brand-800/40'
           : 'bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-800',
@@ -295,7 +308,19 @@ function PipelineCard({ refCode, title, clientName, divisionSlug, primary, secon
         </span>
         <span className="shrink-0 ml-2">{secondary}</span>
       </div>
-    </button>
+      {invoiceHref && (
+        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <Link
+            to={invoiceHref}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand-700 dark:text-brand-300 hover:gap-1.5 transition-all"
+          >
+            <Receipt className="w-3 h-3" strokeWidth={2.5} />
+            Create invoice <ArrowRight className="w-3 h-3" strokeWidth={2.5} />
+          </Link>
+        </div>
+      )}
+    </div>
   )
 }
 

@@ -5,6 +5,8 @@ import BusinessGuard from './components/layout/BusinessGuard'
 
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
 import Schedule from './pages/Schedule'
@@ -34,10 +36,12 @@ import NotFound from './pages/NotFound'
 export default function App() {
   return (
     <Routes>
-      <Route path="/login"  element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/quote/:token"  element={<PublicQuote />} />
-      <Route path="/portal/:token" element={<Portal />} />
+      <Route path="/login"            element={<Login />} />
+      <Route path="/signup"           element={<Signup />} />
+      <Route path="/forgot-password"  element={<ForgotPassword />} />
+      <Route path="/reset-password"   element={<ResetPassword />} />
+      <Route path="/quote/:token"     element={<PublicQuote />} />
+      <Route path="/portal/:token"    element={<Portal />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<BusinessGuard />}>

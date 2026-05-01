@@ -72,10 +72,15 @@ export default function Login() {
             <Button type="submit" loading={loading} className="w-full">Sign in</Button>
           </form>
 
-          <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">Create one</Link>
-          </p>
+          <div className="flex items-center justify-between text-xs pt-2">
+            <Link to="/forgot-password" className="text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:underline">
+              Forgot password?
+            </Link>
+            <span className="text-gray-500 dark:text-gray-400">
+              No account?{' '}
+              <Link to="/signup" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">Create one</Link>
+            </span>
+          </div>
         </Card>
       </div>
     </main>

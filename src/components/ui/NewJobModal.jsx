@@ -36,23 +36,28 @@ const ADD_SENTINEL = '__add__'
  *   open, onClose               required
  *   client                      optional: pre-fills and locks the client picker
  *   premises                    optional: pre-fills and locks the premises picker
+ *   fromQuote                   optional: pre-fills title/description/price/division/client/premises
+ *                               from an accepted quote and stamps the new job with quote_id
  *   createJob                   required: async mutation
  *   onCreated(job)              optional: after success (defaults to nothing)
  */
-export default function NewJobModal({ open, onClose, client: lockedClient, premises: lockedPremises, createJob, onCreated }) {
+export default function NewJobModal({ open, onClose, client: lockedClient, premises: lockedPremises, fromQuote, createJob, onCreated }) {
   const { currentDivision, available, isGroupView } = useDivision()
-  const defaultDivision = lockedPremises?.division_slug ?? currentDivision?.slug ?? available[0]?.slug ?? 'pest'
+  const defaultDivision =
+    fromQuote?.division_slug ??
+    lockedPremises?.division_slug ??
+    currentDivision?.slug ?? available[0]?.slug ?? 'pest'
 
   const [divisionSlug, setDivisionSlug] = useState(defaultDivision)
-  const [clientId, setClientId] = useState(lockedClient?.id ?? '')
-  const [premisesId, setPremisesId] = useState(lockedPremises?.id ?? '')
+  const [clientId, setClientId] = useState(lockedClient?.id ?? fromQuote?.client_id ?? '')
+  const [premisesId, setPremisesId] = useState(lockedPremises?.id ?? fromQuote?.premises_id ?? '')
   const [templateId, setTemplateId] = useState('')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const [title, setTitle] = useState(fromQuote?.subject ?? '')
+  const [description, setDescription] = useState(fromQuote?.scope ?? '')
   const [scheduledDate, setScheduledDate] = useState('')
   const [scheduledTime, setScheduledTime] = useState('09:00')
   const [duration, setDuration] = useState('')
-  const [price, setPrice] = useState('')
+  const [price, setPrice] = useState(fromQuote?.total != null ? String(fromQuote.total) : '')
   const [staffId, setStaffId] = useState('')
   const [repeats, setRepeats] = useState(false)
   const [frequency, setFrequency] = useState('monthly')
@@ -63,11 +68,18 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
   // Reset on open
   useEffect(() => {
     if (!open) return
-    setDivisionSlug(lockedPremises?.division_slug ?? currentDivision?.slug ?? available[0]?.slug ?? 'pest')
-    setClientId(lockedClient?.id ?? '')
-    setPremisesId(lockedPremises?.id ?? '')
+    setDivisionSlug(
+      fromQuote?.division_slug ??
+      lockedPremises?.division_slug ??
+      currentDivision?.slug ?? available[0]?.slug ?? 'pest'
+    )
+    setClientId(lockedClient?.id ?? fromQuote?.client_id ?? '')
+    setPremisesId(lockedPremises?.id ?? fromQuote?.premises_id ?? '')
     setTemplateId('')
-    setTitle(''); setDescription(''); setDuration(''); setPrice('')
+    setTitle(fromQuote?.subject ?? '')
+    setDescription(fromQuote?.scope ?? '')
+    setDuration('')
+    setPrice(fromQuote?.total != null ? String(fromQuote.total) : '')
     setStaffId('')
     setRepeats(false); setFrequency('monthly'); setFrequencyDays('')
     setErrors({}); setSaving(false)
@@ -75,7 +87,7 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
     const d = new Date()
     setScheduledDate(d.toISOString().slice(0, 10))
     setScheduledTime('09:00')
-  }, [open, lockedClient?.id, lockedPremises?.id, currentDivision?.slug, available])
+  }, [open, lockedClient?.id, lockedPremises?.id, fromQuote?.id, currentDivision?.slug, available])
 
   // As of migration 012 clients are scoped per-division. The picker
   // here only lists clients in the same division as the job we're
@@ -173,6 +185,7 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
         assigned_staff_id: staffId || null,
         price: price ? Number(price) : null,
         recurring_profile_id: profileId,
+        quote_id: fromQuote?.id || null,
       })
       toast.success(repeats ? 'Recurring job scheduled' : 'Job scheduled', { description: job.title })
       onClose?.()
