@@ -4,12 +4,16 @@ import { useBusiness } from '../contexts/BusinessContext'
 import { logActivity } from '../lib/activity'
 
 /**
- * useClients — load + search + mutate clients for the current business.
- * Automatic division scoping isn't applied here because clients are
- * business-wide (shared across all divisions). Division-scoped filters
- * happen at the premises/jobs level.
+ * useClients — load + search + mutate clients for the current business,
+ * optionally scoped to a single division.
+ *
+ * As of migration 012 clients carry a division_slug NOT NULL — pass
+ * divisionSlug to filter to that division (the Clients page does this
+ * when not in Group view; client pickers in NewJobModal /
+ * NewQuoteModal / etc. do it so the picker only shows current-division
+ * clients). Omit it to load everything across divisions.
  */
-export function useClients({ search = '' } = {}) {
+export function useClients({ search = '', divisionSlug } = {}) {
   const { business } = useBusiness()
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,19 +23,23 @@ export function useClients({ search = '' } = {}) {
   const refetch = useCallback(async () => {
     if (!business) { setClients([]); setLoading(false); return }
     setLoading(true)
-    const { data, error } = await supabase
+    let q = supabase
       .from('clients')
       .select('*')
       .eq('business_id', business.id)
-      .order('created_at', { ascending: false })
+    if (divisionSlug) q = q.eq('division_slug', divisionSlug)
+    const { data, error } = await q.order('created_at', { ascending: false })
     if (error) setError(error)
     else setClients(data ?? [])
     setLoading(false)
-  }, [business])
+  }, [business, divisionSlug])
 
   useEffect(() => { refetch() }, [refetch])
 
-  // Realtime — replace/add/remove as events arrive
+  // Realtime — replace/add/remove as events arrive. Supabase realtime
+  // filters only support a single `field=op.value`, so we filter by
+  // business_id at the channel and apply the division check (when set)
+  // in the handler.
   useEffect(() => {
     if (!business) return
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -42,10 +50,15 @@ export function useClients({ search = '' } = {}) {
         (payload) => {
           setClients(prev => {
             if (payload.eventType === 'INSERT') {
+              if (divisionSlug && payload.new.division_slug !== divisionSlug) return prev
               if (prev.some(c => c.id === payload.new.id)) return prev
               return [payload.new, ...prev]
             }
             if (payload.eventType === 'UPDATE') {
+              if (divisionSlug && payload.new.division_slug !== divisionSlug) {
+                // The row left this division — drop it from the list
+                return prev.filter(c => c.id !== payload.new.id)
+              }
               return prev.map(c => c.id === payload.new.id ? payload.new : c)
             }
             if (payload.eventType === 'DELETE') {
@@ -57,7 +70,7 @@ export function useClients({ search = '' } = {}) {
       .subscribe()
     channelRef.current = ch
     return () => { supabase.removeChannel(ch) }
-  }, [business])
+  }, [business, divisionSlug])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -73,8 +86,15 @@ export function useClients({ search = '' } = {}) {
 
   const addClient = useCallback(async (payload) => {
     if (!business) throw new Error('No business loaded')
+    // division_slug is required (NOT NULL after migration 012). The
+    // caller — usually AddClientModal — pulls it from useDivision and
+    // falls back to the hook-level divisionSlug if it knows we're
+    // already filtering to a single division.
+    const division = payload.division_slug || divisionSlug
+    if (!division) throw new Error('Missing division — pick a division before creating the client.')
     const row = {
       business_id: business.id,
+      division_slug: division,
       name: payload.name?.trim(),
       client_type: payload.client_type ?? 'residential',
       email: payload.email || null,
@@ -103,7 +123,7 @@ export function useClients({ search = '' } = {}) {
       entity_id: data.id,
     })
     return data
-  }, [business])
+  }, [business, divisionSlug])
 
   const updateClient = useCallback(async (id, patch) => {
     const clean = {

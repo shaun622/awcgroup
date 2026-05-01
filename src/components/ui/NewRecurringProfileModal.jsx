@@ -73,7 +73,9 @@ export default function NewRecurringProfileModal({
     setErrors({})
   }, [open, lockedClient?.id, lockedPremises?.id, currentDivision?.slug, available])
 
-  const { allClients } = useClients()
+  // Per-division client scoping — only show clients in the same
+  // division as the recurring profile we're creating.
+  const { allClients } = useClients({ divisionSlug })
   const { premises: clientPremises } = usePremises({
     clientId: clientId || undefined,
     divisionSlug,

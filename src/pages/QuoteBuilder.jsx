@@ -32,11 +32,13 @@ export default function QuoteBuilder() {
   const { quote, client: loadedClient, premises: loadedPremises, loading } = useQuote(id)
   const { createQuote, updateQuote, sendQuote, respondToQuote } = useQuotes()
   const { currentDivision, available } = useDivision()
-  const { allClients, addClient } = useClients()
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [addPremisesOpen, setAddPremisesOpen] = useState(false)
 
   const [divisionSlug, setDivisionSlug] = useState(currentDivision?.slug ?? available[0]?.slug ?? 'pest')
+  // Per-division client scoping (migration 012) — picker only lists
+  // clients in the same division as the quote we're drafting.
+  const { allClients, addClient } = useClients({ divisionSlug })
   const [clientId, setClientId] = useState('')
   const [premisesId, setPremisesId] = useState('')
   const [subject, setSubject] = useState('')

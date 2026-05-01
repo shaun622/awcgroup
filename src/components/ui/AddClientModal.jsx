@@ -7,7 +7,9 @@ import Input, { Select, TextArea } from './Input'
 import Button from './Button'
 import { supabase } from '../../lib/supabase'
 import { useBusiness } from '../../contexts/BusinessContext'
-import { CLIENT_TYPES, formatPostcode, formatUKPhone, statusLabel, validateUKPostcode } from '../../lib/utils'
+import { useDivision } from '../../contexts/DivisionContext'
+import { DIVISION_SLUGS, getDivision } from '../../lib/divisionRegistry'
+import { CLIENT_TYPES, formatPostcode, formatUKPhone, statusLabel, validateUKPostcode, cn } from '../../lib/utils'
 
 const emptyForm = {
   name: '',
@@ -20,10 +22,11 @@ const emptyForm = {
   postcode: '',
   notes: '',
   pipeline_stage: 'lead',
+  division_slug: '',
 }
 
-function fromRecord(c) {
-  if (!c) return emptyForm
+function fromRecord(c, defaultDivision) {
+  if (!c) return { ...emptyForm, division_slug: defaultDivision || '' }
   return {
     name: c.name ?? '',
     client_type: c.client_type ?? 'residential',
@@ -35,6 +38,7 @@ function fromRecord(c) {
     postcode: c.postcode ?? '',
     notes: c.notes ?? '',
     pipeline_stage: c.pipeline_stage ?? 'lead',
+    division_slug: c.division_slug ?? '',
   }
 }
 
@@ -57,8 +61,12 @@ export default function AddClientModal({
 }) {
   const navigate = useNavigate()
   const { business } = useBusiness()
+  // Pull current division so a new client gets the right division_slug.
+  // In Group view (isGroupView) the operator must pick one — we render
+  // a Division selector in the form below.
+  const { currentDivision, isGroupView } = useDivision()
   const isEdit = !!editing
-  const [form, setForm] = useState(() => fromRecord(editing))
+  const [form, setForm] = useState(() => fromRecord(editing, currentDivision?.slug))
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   // Holds an existing client whose email or phone matches what's being
@@ -68,19 +76,24 @@ export default function AddClientModal({
   // "John Smith" residentials can coexist).
   const [duplicate, setDuplicate] = useState(null)
 
-  // Hydrate when modal opens or when the editing record changes
+  // Hydrate when modal opens or when the editing record changes. New
+  // clients default to the current division (or stay blank in Group
+  // view so the user picks via the Division selector below).
   useEffect(() => {
-    if (open) setForm(fromRecord(editing))
+    if (open) setForm(fromRecord(editing, currentDivision?.slug))
     if (open) setErrors({})
     if (!open) setDuplicate(null)
-  }, [open, editing?.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id, currentDivision?.slug])
 
   // Live duplicate check — keyed on email + phone, NOT name. Email match
   // is case-insensitive trimmed; phone match strips all non-digits so
-  // "07123 456789" and "07123456789" collide. Skipped while editing an
-  // existing record (we'd flag the row against itself).
+  // "07123 456789" and "07123456789" collide. Scoped to the current
+  // division so the same email/phone CAN exist in different divisions
+  // (a customer used by both Pest Control and Fire Safety needs a
+  // separate clients row per division). Skipped while editing.
   useEffect(() => {
-    if (!open || isEdit || !business?.id) { setDuplicate(null); return }
+    if (!open || isEdit || !business?.id || !form.division_slug) { setDuplicate(null); return }
     const email = (form.email || '').trim().toLowerCase()
     const phone = (form.phone || '').replace(/\D/g, '')
     if (!email && phone.length < 6) { setDuplicate(null); return }
@@ -94,6 +107,7 @@ export default function AddClientModal({
         .from('clients')
         .select('id, name, email, phone, address_line_1, city, postcode')
         .eq('business_id', business.id)
+        .eq('division_slug', form.division_slug)
         .or(filters.join(','))
         .limit(10)
       if (cancelled) return
@@ -110,11 +124,11 @@ export default function AddClientModal({
       setDuplicate(match || null)
     }, 250)
     return () => { cancelled = true; clearTimeout(t) }
-  }, [open, isEdit, business?.id, form.email, form.phone])
+  }, [open, isEdit, business?.id, form.email, form.phone, form.division_slug])
 
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const reset = () => { setForm(fromRecord(editing)); setErrors({}); setSaving(false); setDuplicate(null) }
+  const reset = () => { setForm(fromRecord(editing, currentDivision?.slug)); setErrors({}); setSaving(false); setDuplicate(null) }
 
   function useExisting() {
     if (!duplicate) return
@@ -127,17 +141,18 @@ export default function AddClientModal({
     const errs = {}
     if (!form.name.trim()) errs.name = 'Required'
     if (form.postcode && !validateUKPostcode(form.postcode)) errs.postcode = 'Invalid UK postcode'
+    if (!isEdit && !form.division_slug) errs.division_slug = 'Pick a division'
     setErrors(errs)
     if (Object.keys(errs).length) return
 
     setSaving(true)
     try {
-      // Belt-and-braces dup check on submit — only when creating, by
-      // email or phone. If we find one, surface it as the warning and
-      // don't insert. The live useEffect already guards against this
-      // but a 250ms debounce window means a fast operator could submit
-      // before the live check catches a freshly-typed match.
-      if (!isEdit && business?.id) {
+      // Belt-and-braces dup check on submit — scoped to the same
+      // division as the live check. Only when creating; the live
+      // useEffect already guards against this but a 250ms debounce
+      // window means a fast operator could submit before the live
+      // check catches a freshly-typed match.
+      if (!isEdit && business?.id && form.division_slug) {
         const trimmedEmail = (form.email || '').trim().toLowerCase()
         const trimmedPhone = (form.phone || '').replace(/\D/g, '')
         if (trimmedEmail || trimmedPhone.length >= 6) {
@@ -148,6 +163,7 @@ export default function AddClientModal({
             .from('clients')
             .select('id, name, email, phone, address_line_1, city, postcode')
             .eq('business_id', business.id)
+            .eq('division_slug', form.division_slug)
             .or(filters.join(','))
             .limit(10)
           const match = (existing || []).find(c => {
@@ -199,6 +215,44 @@ export default function AddClientModal({
       zLayer={zLayer}
     >
       <form onSubmit={submit} className="space-y-4">
+        {/* Division — locked when editing (can't move a client between
+            divisions), pre-filled from the current division when adding,
+            and shown as a chip picker when in Group view so the operator
+            picks one explicitly. Clients are scoped per-division: same
+            email/phone CAN exist in different divisions. */}
+        {!isEdit && (
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
+              Division <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(business?.enabled_divisions ?? DIVISION_SLUGS).map(slug => {
+                const div = getDivision(slug)
+                const active = form.division_slug === slug
+                return (
+                  <button
+                    key={slug}
+                    type="button"
+                    onClick={() => update('division_slug', slug)}
+                    className={cn(
+                      'rounded-xl border-2 px-3 py-2 text-xs font-semibold transition-all min-h-[40px] flex items-center gap-1.5',
+                      active ? '' : 'border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300',
+                    )}
+                    style={active ? { borderColor: div.brand_hex, backgroundColor: `${div.brand_hex}15`, color: div.brand_hex } : {}}
+                  >
+                    <div.icon className="w-3.5 h-3.5" strokeWidth={2.2} />
+                    {div.name}
+                  </button>
+                )
+              })}
+            </div>
+            {errors.division_slug && <p className="text-xs text-red-500 font-medium">{errors.division_slug}</p>}
+            {isGroupView && !form.division_slug && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">You're in Group view — pick the division this client belongs to.</p>
+            )}
+          </div>
+        )}
+
         <Input label="Full name or business name" required autoFocus value={form.name} onChange={e => update('name', e.target.value)} error={errors.name} placeholder="e.g. Riverside Café Ltd" />
 
         <div className="grid grid-cols-2 gap-3">

@@ -11,6 +11,7 @@ import { SkeletonList } from '../components/ui/Skeleton'
 import AddClientModal from '../components/ui/AddClientModal'
 import { useClients } from '../hooks/useClients'
 import { useBusiness } from '../contexts/BusinessContext'
+import { useDivision } from '../contexts/DivisionContext'
 import { supabase } from '../lib/supabase'
 import { cn, formatGBP, formatRelative, statusLabel, statusVariant } from '../lib/utils'
 
@@ -23,10 +24,16 @@ const PAID_INVOICE_STATUSES = new Set(['paid'])
 export default function Clients() {
   const navigate = useNavigate()
   const { business } = useBusiness()
+  const { currentDivision, isGroupView } = useDivision()
+  // Per-division scoping (added via migration 012). When in Group view
+  // we show clients from every division so the operator can audit the
+  // full roster; when viewing a specific division, only that division's
+  // clients show up.
+  const divisionSlug = isGroupView ? undefined : currentDivision?.slug
   const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
-  const { clients, loading, allClients, addClient } = useClients({ search })
+  const { clients, loading, allClients, addClient } = useClients({ search, divisionSlug })
 
   // Per-client roll-ups: premises (sites), jobs, invoices. We fetch these
   // once at page load and group client-side rather than running three
@@ -123,11 +130,17 @@ export default function Clients() {
             <p className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-700 dark:text-brand-300">
               <Users className="w-3.5 h-3.5" strokeWidth={2.5} />
               CRM
+              <span className="text-gray-300 dark:text-gray-600">·</span>
+              <span className="font-medium normal-case tracking-normal text-gray-500 dark:text-gray-400">
+                {isGroupView ? 'All divisions' : currentDivision?.name}
+              </span>
             </p>
             <h1 className="mt-1 text-2xl md:text-[26px] font-bold text-gray-900 dark:text-gray-100 tracking-tight">
               {totalClients} {totalClients === 1 ? 'client' : 'clients'}
               {totalClients > 0 && (
-                <span className="text-gray-400 dark:text-gray-500 font-normal text-base ml-2">· shared across all divisions</span>
+                <span className="text-gray-400 dark:text-gray-500 font-normal text-base ml-2">
+                  · {isGroupView ? 'across all divisions' : `in ${currentDivision?.name}`}
+                </span>
               )}
             </h1>
           </div>

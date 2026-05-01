@@ -31,11 +31,15 @@ export default function InvoiceBuilder() {
   const { business } = useBusiness()
   const { invoice, client: loadedClient, loading } = useInvoice(id)
   const { createInvoice, updateInvoice, sendInvoice, markPaid } = useInvoices()
-  const { allClients, addClient } = useClients()
   const [addClientOpen, setAddClientOpen] = useState(false)
 
   const [clientId, setClientId] = useState('')
   const [divisionSlug, setDivisionSlug] = useState('')
+  // Per-division client scoping (migration 012) — picker only lists
+  // clients in the same division as the invoice we're drafting. When
+  // divisionSlug isn't set yet (new invoice, before user picks a
+  // division), useClients falls back to all-divisions.
+  const { allClients, addClient } = useClients({ divisionSlug: divisionSlug || undefined })
   const [jobId, setJobId] = useState('')
   const [quoteId, setQuoteId] = useState('')
   const [lineItems, setLineItems] = useState([BLANK_LINE])

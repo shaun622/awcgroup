@@ -77,7 +77,11 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
     setScheduledTime('09:00')
   }, [open, lockedClient?.id, lockedPremises?.id, currentDivision?.slug, available])
 
-  const { allClients, addClient } = useClients()
+  // As of migration 012 clients are scoped per-division. The picker
+  // here only lists clients in the same division as the job we're
+  // creating — picking a Fire Safety client for a Pest Control job
+  // would be a data-integrity bug.
+  const { allClients, addClient } = useClients({ divisionSlug })
   const { premises: clientPremises, addPremises } = usePremises({
     clientId: clientId || undefined,
     divisionSlug,
@@ -93,7 +97,8 @@ export default function NewJobModal({ open, onClose, client: lockedClient, premi
   const [addStaffOpen, setAddStaffOpen] = useState(false)
   const [newStaffId, setNewStaffId] = useState(null)
 
-  // Narrow client list if divisions ever become client-scoped; for now they're shared
+  // useClients above is already filtered to the current division — no
+  // further narrowing needed.
   const clientOptions = useMemo(() => allClients ?? [], [allClients])
 
   // When template changes, pre-fill title/duration/price from the template
