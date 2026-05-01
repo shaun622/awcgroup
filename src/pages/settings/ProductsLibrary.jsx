@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Package, Search } from 'lucide-react'
-import PageWrapper from '../../components/layout/PageWrapper'
+import { Package, Search } from 'lucide-react'
 import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
 import EmptyState from '../../components/ui/EmptyState'
@@ -60,16 +59,8 @@ export default function ProductsLibrary() {
   }, [filtered])
 
   return (
-    <PageWrapper size="xl">
-      <button
-        onClick={() => navigate('/settings')}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4 -ml-1 min-h-tap px-1"
-      >
-        <ArrowLeft className="w-4 h-4" /> Settings
-      </button>
-
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight mb-1">Products &amp; equipment</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Per-division library — used when logging what was consumed on a job.</p>
+    <div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Per-division library — used when logging what was consumed on a job.</p>
 
       {/* Division picker */}
       <div className="mb-4 flex flex-wrap gap-2">
@@ -133,6 +124,6 @@ export default function ProductsLibrary() {
           ))}
         </div>
       )}
-    </PageWrapper>
+    </div>
   )
 }

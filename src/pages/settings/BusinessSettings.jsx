@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { toast } from 'sonner'
-import PageWrapper from '../../components/layout/PageWrapper'
 import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
@@ -10,8 +8,9 @@ import { useBusiness } from '../../contexts/BusinessContext'
 import { supabase } from '../../lib/supabase'
 import { formatPostcode, formatUKPhone, validateUKPostcode } from '../../lib/utils'
 
+// Renders inside the Settings shell's right pane (see ../Settings.jsx).
+// No PageWrapper / back-link / outer h1 — the shell handles all of that.
 export default function BusinessSettings() {
-  const navigate = useNavigate()
   const { business, refetch } = useBusiness()
   const [form, setForm] = useState({
     name: '', trading_name: '', companies_house_number: '', vat_number: '',
@@ -77,16 +76,8 @@ export default function BusinessSettings() {
   }
 
   return (
-    <PageWrapper size="xl">
-      <button
-        onClick={() => navigate('/settings')}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4 -ml-1 min-h-tap px-1"
-      >
-        <ArrowLeft className="w-4 h-4" /> Settings
-      </button>
-
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight mb-1">Business details</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">These appear on quotes and invoices.</p>
+    <div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">These appear on quotes and invoices.</p>
 
       <Card className="space-y-4 mb-6">
         <Input label="Business name" required value={form.name} onChange={e => update('name', e.target.value)} error={errors.name} />
@@ -129,6 +120,6 @@ export default function BusinessSettings() {
           Save business details
         </Button>
       </div>
-    </PageWrapper>
+    </div>
   )
 }

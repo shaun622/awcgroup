@@ -1,7 +1,5 @@
 import { useState, useMemo } from 'react'
-import { ArrowLeft, Plus, Users, Shield, Wrench, Phone, Mail } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import PageWrapper from '../components/layout/PageWrapper'
+import { Plus, Users, Shield, Wrench, Phone, Mail } from 'lucide-react'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -20,8 +18,9 @@ import { statusLabel, cn } from '../lib/utils'
 const ADMIN_ROLES = new Set(['admin', 'owner'])
 const isAdminRole = (role) => ADMIN_ROLES.has((role || '').toLowerCase())
 
+// Renders inside the Settings shell's right pane (see ../pages/Settings.jsx).
+// No PageWrapper / back-link / outer h1 — the shell handles all of that.
 export default function Staff() {
-  const navigate = useNavigate()
   const { staff, loading } = useStaff()
   // staffLimit comes from BusinessContext: businesses.staff_seat_override
   // (HQ admin override) ?? plans.max_staff for the current plan ?? 1.
@@ -73,22 +72,10 @@ export default function Staff() {
   }
 
   return (
-    <PageWrapper size="xl">
-      <button
-        onClick={() => navigate('/settings')}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4 -ml-1 min-h-tap px-1"
-      >
-        <ArrowLeft className="w-4 h-4" /> Settings
-      </button>
-
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Staff</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 tabular-nums">
-            {activeCount} of {staffLimit} {staffLimit === 1 ? 'seat' : 'seats'} used
-          </p>
-        </div>
-      </div>
+    <div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 tabular-nums">
+        {activeCount} of {staffLimit} {staffLimit === 1 ? 'seat' : 'seats'} used
+      </p>
 
       {loading ? (
         <SkeletonList count={2} />
@@ -126,7 +113,7 @@ export default function Staff() {
       )}
 
       <AddStaffModal open={addOpen} onClose={() => setAddOpen(false)} defaultRole={addRoleHint} />
-    </PageWrapper>
+    </div>
   )
 }
 

@@ -62,11 +62,18 @@ export default function App() {
             <Route path="/invoices/new"   element={<InvoiceBuilder />} />
             <Route path="/invoices/:id"   element={<InvoiceBuilder />} />
             <Route path="/analytics"  element={<Analytics />} />
-            <Route path="/settings"           element={<Settings />} />
-            <Route path="/settings/business"  element={<BusinessSettings />} />
-            <Route path="/settings/divisions" element={<DivisionsSettings />} />
-            <Route path="/settings/products"  element={<ProductsLibrary />} />
-            <Route path="/settings/staff"     element={<Staff />} />
+            <Route path="/settings" element={<Settings />}>
+              {/* /settings (index) renders the Organisation pane (BusinessSettings).
+                  Sub-routes render the matching sub-page inside Settings' shell. */}
+              <Route index             element={<BusinessSettings />} />
+              <Route path="divisions"  element={<DivisionsSettings />} />
+              <Route path="products"   element={<ProductsLibrary />} />
+              <Route path="staff"      element={<Staff />} />
+            </Route>
+            {/* Legacy redirect: /settings/business → /settings (now the index) */}
+            <Route path="/settings/business" element={<Settings />}>
+              <Route index element={<BusinessSettings />} />
+            </Route>
           </Route>
         </Route>
       </Route>
