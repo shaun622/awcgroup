@@ -13,13 +13,13 @@ const ROLES = [
   { value: 'admin', label: 'Admin — full access except ownership' },
 ]
 
-export default function AddStaffModal({ open, onClose, onCreated, defaultDivisions, zLayer }) {
-  const { business } = useBusiness()
+export default function AddStaffModal({ open, onClose, onCreated, defaultDivisions, defaultRole = 'tech', zLayer }) {
+  const { business, staffLimit } = useBusiness()
   const [form, setForm] = useState({
     name: '',
     email: '',
     phone: '',
-    role: 'tech',
+    role: defaultRole,
     divisions: defaultDivisions ?? business?.enabled_divisions ?? [],
   })
   const [saving, setSaving] = useState(false)
@@ -36,7 +36,7 @@ export default function AddStaffModal({ open, onClose, onCreated, defaultDivisio
   }
 
   const reset = () => {
-    setForm({ name: '', email: '', phone: '', role: 'tech', divisions: defaultDivisions ?? business?.enabled_divisions ?? [] })
+    setForm({ name: '', email: '', phone: '', role: defaultRole, divisions: defaultDivisions ?? business?.enabled_divisions ?? [] })
     setErrors({}); setSaving(false)
   }
 
@@ -50,6 +50,22 @@ export default function AddStaffModal({ open, onClose, onCreated, defaultDivisio
 
     setSaving(true)
     try {
+      // Server-side seat-limit guard. Even if the calling page disables
+      // its Add button at the limit (Staff.jsx does), the modal can be
+      // surfaced from other entry points — re-check at submit time
+      // against the live count and bail with a toast if we're at cap.
+      const { count: activeCount, error: cntErr } = await supabase
+        .from('staff_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('business_id', business.id)
+        .eq('active', true)
+      if (cntErr) throw cntErr
+      if ((activeCount ?? 0) >= staffLimit) {
+        toast.error('Seat limit reached', { description: `Your plan allows ${staffLimit} staff. Upgrade or contact support to add more.` })
+        setSaving(false)
+        return
+      }
+
       const { data, error } = await supabase.from('staff_members').insert({
         business_id: business.id,
         name: form.name.trim(),
