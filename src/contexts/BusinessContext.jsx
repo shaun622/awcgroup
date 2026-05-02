@@ -18,12 +18,36 @@ export function BusinessProvider({ children }) {
       return
     }
     setLoading(true)
-    const { data, error } = await supabase
+    // 1. Owner path — does this auth user own a business?
+    const { data: owned } = await supabase
       .from('businesses')
       .select('*')
       .eq('owner_id', user.id)
       .maybeSingle()
-    if (!error) setBusiness(data ?? null)
+    if (owned) {
+      setBusiness(owned)
+      setLoading(false)
+      return
+    }
+    // 2. Staff path — is this auth user attached to a business via a
+    //    staff_members invite? AWC is invite-only (no public Onboarding
+    //    creating new businesses) — every non-owner accesses the app
+    //    through a staff_members row that links auth_user_id to the
+    //    parent business.
+    const { data: staffRow } = await supabase
+      .from('staff_members')
+      .select('*, businesses(*)')
+      .eq('auth_user_id', user.id)
+      .eq('active', true)
+      .maybeSingle()
+    if (staffRow?.businesses) {
+      setBusiness(staffRow.businesses)
+      setLoading(false)
+      return
+    }
+    // 3. No business + no invite — Onboarding handles the "awaiting
+    //    invite" UX (or the email-match link if a pending invite exists).
+    setBusiness(null)
     setLoading(false)
   }, [user])
 
