@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Receipt, Plus, Wallet, Clock, AlertTriangle } from 'lucide-react'
+import { Receipt, Plus, Wallet, Clock, AlertTriangle, Download } from 'lucide-react'
 import PageWrapper from '../components/layout/PageWrapper'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
@@ -60,6 +60,52 @@ export default function Invoices() {
     ? 'No invoices yet'
     : `${invoices.length} invoice${invoices.length === 1 ? '' : 's'} · ${monthName}`
 
+  // CSV export of the visible list — division context drives what's
+  // visible, so an export from "Pest" exports just Pest invoices, and
+  // group view exports everything. One row per invoice (header data).
+  // Numbers exported raw (no currency symbol) so accounting software
+  // can sum them without strip-and-parse.
+  const csvCell = (v) => {
+    if (v == null) return ''
+    const s = String(v)
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  function exportCsv() {
+    const header = [
+      'Invoice number', 'Division', 'Client', 'Status',
+      'Issue date', 'Due date', 'Paid date',
+      'Subtotal (GBP)', 'VAT (GBP)', 'VAT rate', 'Total (GBP)',
+    ]
+    const rows = invoices.map(inv => {
+      const client = clientById.get(inv.client_id)
+      const overdue = isOverdue(inv, todayIso)
+      return [
+        inv.invoice_number || '',
+        inv.division_slug || '',
+        client?.name || '',
+        overdue ? `Overdue (${daysSince(inv.due_date)}d)` : statusLabel(inv.status),
+        inv.issue_date || '',
+        inv.due_date || '',
+        inv.paid_at ? String(inv.paid_at).slice(0, 10) : '',
+        Number(inv.subtotal || 0).toFixed(2),
+        Number(inv.vat_amount || 0).toFixed(2),
+        inv.vat_rate != null ? `${(Number(inv.vat_rate) * 100).toFixed(2)}%` : '',
+        Number(inv.total || 0).toFixed(2),
+      ]
+    })
+    const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n')
+    // UTF-8 BOM for Excel-friendly opening with non-ASCII names.
+    const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const today = new Date().toISOString().slice(0, 10)
+    const scope = isGroupView ? 'all' : (currentDivision?.slug || 'all')
+    a.download = `awc-invoices-${scope}-${today}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <PageWrapper size="full" className="!bg-slate-50 dark:!bg-gray-950">
       <div className="py-2">
@@ -78,9 +124,16 @@ export default function Invoices() {
               {titleLine}
             </h1>
           </div>
-          <Button onClick={() => navigate('/invoices/new')} leftIcon={<Plus className="w-4 h-4" />} className="shrink-0">
-            New invoice
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {invoices.length > 0 && (
+              <Button onClick={exportCsv} leftIcon={<Download className="w-4 h-4" />} variant="secondary">
+                Export
+              </Button>
+            )}
+            <Button onClick={() => navigate('/invoices/new')} leftIcon={<Plus className="w-4 h-4" />}>
+              New invoice
+            </Button>
+          </div>
         </div>
 
         {/* Desktop KPI strip */}
