@@ -140,7 +140,10 @@ export default function PublicQuote() {
           ))}
           <div className="px-5 py-4 space-y-1.5 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="tabular-nums">{formatGBP(quote.subtotal)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">VAT ({Math.round(Number(quote.vat_rate) * 100)}%)</span><span className="tabular-nums">{formatGBP(quote.vat_amount)}</span></div>
+            {/* Hide VAT row for docs issued without VAT (rate is 0). */}
+            {Number(quote.vat_rate) > 0 && (
+              <div className="flex justify-between"><span className="text-gray-500">VAT ({Math.round(Number(quote.vat_rate) * 100)}%)</span><span className="tabular-nums">{formatGBP(quote.vat_amount)}</span></div>
+            )}
             <div className="flex justify-between pt-2 border-t border-gray-100 dark:border-gray-800"><span className="font-bold text-gray-900 dark:text-gray-100">Total</span><span className="tabular-nums text-lg font-bold text-gray-900 dark:text-gray-100">{formatGBP(quote.total)}</span></div>
           </div>
         </Card>

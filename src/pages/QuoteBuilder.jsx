@@ -68,10 +68,16 @@ export default function QuoteBuilder() {
   // Seed VAT rate from business default for NEW quotes only.
   // Existing quotes carry their own vat_rate (set above) so we don't
   // retroactively rewrite an issued doc when HMRC moves the rate.
+  // When business has VAT disabled (unregistered), force rate=0
+  // regardless of stored business.vat_rate.
   useEffect(() => {
-    if (!isNew || quote) return
-    if (business?.vat_rate != null) setVatRate(Number(business.vat_rate))
-  }, [isNew, quote, business?.vat_rate])
+    if (!isNew || quote || !business) return
+    if (business.vat_enabled === false) {
+      setVatRate(0)
+    } else if (business.vat_rate != null) {
+      setVatRate(Number(business.vat_rate))
+    }
+  }, [isNew, quote, business?.vat_rate, business?.vat_enabled])
 
   const { premises: clientPremises, addPremises } = usePremises({
     clientId: clientId || undefined,
@@ -386,7 +392,10 @@ export default function QuoteBuilder() {
         {/* Totals */}
         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-1.5 ml-auto max-w-xs text-sm">
           <Row label="Subtotal" value={formatGBP(totals.subtotal)} />
-          <Row label={`VAT (${Math.round(vatRate * 100)}%)`} value={formatGBP(totals.vatAmount)} />
+          {/* Hide VAT row when rate is 0 (unregistered or off). */}
+          {vatRate > 0 && (
+            <Row label={`VAT (${Math.round(vatRate * 100)}%)`} value={formatGBP(totals.vatAmount)} />
+          )}
           <Row label="Total" value={formatGBP(totals.total)} big />
         </div>
       </Card>

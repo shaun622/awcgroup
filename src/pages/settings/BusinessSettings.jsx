@@ -6,7 +6,7 @@ import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { supabase } from '../../lib/supabase'
-import { formatPostcode, formatUKPhone, validateUKPostcode } from '../../lib/utils'
+import { cn, formatPostcode, formatUKPhone, validateUKPostcode } from '../../lib/utils'
 
 // Renders inside the Settings shell's right pane (see ../Settings.jsx).
 // No PageWrapper / back-link / outer h1 — the shell handles all of that.
@@ -17,6 +17,11 @@ export default function BusinessSettings() {
     address_line_1: '', address_line_2: '', city: '', county: '', postcode: '',
     phone: '', email: '',
     invoice_prefix: 'INV', default_payment_terms_days: 14,
+    // vat_enabled is the master switch: false means we're not VAT-
+    // registered, so new docs save with rate=0 and the VAT line is
+    // hidden in totals. Toggling this off keeps the entered rate
+    // around so flipping back on is one click.
+    vat_enabled: true,
     // VAT stored as decimal (0.20 = 20%) but edited as percent so the
     // operator types "20" instead of "0.20". Save converts back.
     vat_rate_percent: 20,
@@ -40,6 +45,9 @@ export default function BusinessSettings() {
       email: business.email ?? '',
       invoice_prefix: business.invoice_prefix ?? 'INV',
       default_payment_terms_days: business.default_payment_terms_days ?? 14,
+      // Treat absence as "registered" (current behaviour) for legacy
+      // rows that predate the vat_enabled column.
+      vat_enabled: business.vat_enabled !== false,
       // numeric(5,4) arrives from PostgREST as a string ("0.2000") so coerce.
       vat_rate_percent: business.vat_rate != null ? Number(business.vat_rate) * 100 : 20,
     })
@@ -55,6 +63,12 @@ export default function BusinessSettings() {
     if (Object.keys(errs).length) return
     setSaving(true)
     try {
+      // Use Number.isFinite so an empty field falls back to 20%, but
+      // explicit 0 is preserved (the previous `|| 20` snapped 0 back
+      // to 20, which was the bug operators hit when trying to disable
+      // VAT by typing 0).
+      const pct = Number(form.vat_rate_percent)
+      const vatRate = Number.isFinite(pct) ? Math.max(0, Math.min(1, pct / 100)) : 0.20
       const { error } = await supabase.from('businesses').update({
         name: form.name.trim(),
         trading_name: form.trading_name || null,
@@ -69,8 +83,8 @@ export default function BusinessSettings() {
         email: form.email || null,
         invoice_prefix: form.invoice_prefix?.trim().toUpperCase() || 'INV',
         default_payment_terms_days: Number(form.default_payment_terms_days) || 14,
-        // Clamp to [0, 1] so a typo like "200" can't write a 2.0 rate.
-        vat_rate: Math.max(0, Math.min(1, (Number(form.vat_rate_percent) || 20) / 100)),
+        vat_enabled: !!form.vat_enabled,
+        vat_rate: vatRate,
       }).eq('id', business.id)
       if (error) throw error
       await refetch()
@@ -116,9 +130,42 @@ export default function BusinessSettings() {
 
       <h2 className="section-title mb-2">Invoicing</h2>
       <Card className="space-y-4 mb-6">
+        {/* Master VAT toggle. Disabled state greys the rate input but
+            keeps the value so flipping back on doesn't lose the rate. */}
+        <div className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Charge VAT</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {form.vat_enabled
+                ? 'New quotes and invoices include VAT at the rate below.'
+                : "Off — new quotes and invoices won't include VAT. Turn on once you're VAT-registered."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={form.vat_enabled}
+            onClick={() => update('vat_enabled', !form.vat_enabled)}
+            className={cn(
+              'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors',
+              form.vat_enabled ? 'bg-brand-500' : 'bg-gray-300 dark:bg-gray-700',
+            )}
+          >
+            <span
+              aria-hidden
+              className={cn(
+                'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform translate-y-0.5',
+                form.vat_enabled ? 'translate-x-[1.375rem]' : 'translate-x-0.5',
+              )}
+            />
+          </button>
+        </div>
+
         <div className="grid grid-cols-3 gap-3">
           <Input label="Invoice prefix" value={form.invoice_prefix} onChange={e => update('invoice_prefix', e.target.value)} hint="Appears before the year + number, e.g. INV-2026-0001" />
-          <Input label="VAT rate (%)" type="number" min="0" max="100" step="0.1" value={form.vat_rate_percent} onChange={e => update('vat_rate_percent', e.target.value)} placeholder="20" />
+          <div className={form.vat_enabled ? '' : 'opacity-50 pointer-events-none'}>
+            <Input label="VAT rate (%)" type="number" min="0" max="100" step="0.1" value={form.vat_rate_percent} onChange={e => update('vat_rate_percent', e.target.value)} placeholder="20" disabled={!form.vat_enabled} />
+          </div>
           <Input label="Default payment terms (days)" type="number" min="0" value={form.default_payment_terms_days} onChange={e => update('default_payment_terms_days', e.target.value)} />
         </div>
       </Card>

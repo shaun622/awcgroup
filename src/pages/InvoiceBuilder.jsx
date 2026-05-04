@@ -67,10 +67,15 @@ export default function InvoiceBuilder() {
   // Existing invoices carry their own vat_rate so we don't retroactively
   // rewrite an issued doc when HMRC moves the rate. The ?from=quote:ID
   // hydration below will override this with the source quote's rate.
+  // When business has VAT disabled (unregistered), force rate=0.
   useEffect(() => {
-    if (!isNew || invoice) return
-    if (business?.vat_rate != null) setVatRate(Number(business.vat_rate))
-  }, [isNew, invoice, business?.vat_rate])
+    if (!isNew || invoice || !business) return
+    if (business.vat_enabled === false) {
+      setVatRate(0)
+    } else if (business.vat_rate != null) {
+      setVatRate(Number(business.vat_rate))
+    }
+  }, [isNew, invoice, business?.vat_rate, business?.vat_enabled])
 
   // Hydrate from ?from=job:ID or ?from=quote:ID (one-off on mount)
   useEffect(() => {
@@ -265,7 +270,10 @@ export default function InvoiceBuilder() {
 
         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-1.5 ml-auto max-w-xs text-sm">
           <Row label="Subtotal" value={formatGBP(totals.subtotal)} />
-          <Row label={`VAT (${Math.round(vatRate * 100)}%)`} value={formatGBP(totals.vatAmount)} />
+          {/* Hide VAT row when rate is 0 (unregistered or off). */}
+          {vatRate > 0 && (
+            <Row label={`VAT (${Math.round(vatRate * 100)}%)`} value={formatGBP(totals.vatAmount)} />
+          )}
           <Row label="Total" value={formatGBP(totals.total)} big />
         </div>
       </Card>
