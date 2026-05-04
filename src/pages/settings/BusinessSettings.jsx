@@ -17,6 +17,9 @@ export default function BusinessSettings() {
     address_line_1: '', address_line_2: '', city: '', county: '', postcode: '',
     phone: '', email: '',
     invoice_prefix: 'INV', default_payment_terms_days: 14,
+    // VAT stored as decimal (0.20 = 20%) but edited as percent so the
+    // operator types "20" instead of "0.20". Save converts back.
+    vat_rate_percent: 20,
   })
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
@@ -37,6 +40,8 @@ export default function BusinessSettings() {
       email: business.email ?? '',
       invoice_prefix: business.invoice_prefix ?? 'INV',
       default_payment_terms_days: business.default_payment_terms_days ?? 14,
+      // numeric(5,4) arrives from PostgREST as a string ("0.2000") so coerce.
+      vat_rate_percent: business.vat_rate != null ? Number(business.vat_rate) * 100 : 20,
     })
   }, [business?.id])
 
@@ -64,6 +69,8 @@ export default function BusinessSettings() {
         email: form.email || null,
         invoice_prefix: form.invoice_prefix?.trim().toUpperCase() || 'INV',
         default_payment_terms_days: Number(form.default_payment_terms_days) || 14,
+        // Clamp to [0, 1] so a typo like "200" can't write a 2.0 rate.
+        vat_rate: Math.max(0, Math.min(1, (Number(form.vat_rate_percent) || 20) / 100)),
       }).eq('id', business.id)
       if (error) throw error
       await refetch()
@@ -109,8 +116,9 @@ export default function BusinessSettings() {
 
       <h2 className="section-title mb-2">Invoicing</h2>
       <Card className="space-y-4 mb-6">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Input label="Invoice prefix" value={form.invoice_prefix} onChange={e => update('invoice_prefix', e.target.value)} hint="Appears before the year + number, e.g. INV-2026-0001" />
+          <Input label="VAT rate (%)" type="number" min="0" max="100" step="0.1" value={form.vat_rate_percent} onChange={e => update('vat_rate_percent', e.target.value)} placeholder="20" />
           <Input label="Default payment terms (days)" type="number" min="0" value={form.default_payment_terms_days} onChange={e => update('default_payment_terms_days', e.target.value)} />
         </div>
       </Card>

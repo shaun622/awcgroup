@@ -15,6 +15,7 @@ import AddClientModal from '../components/ui/AddClientModal'
 import AddPremisesModal from '../components/ui/AddPremisesModal'
 import { SkeletonCard } from '../components/ui/Skeleton'
 import { useDivision } from '../contexts/DivisionContext'
+import { useBusiness } from '../contexts/BusinessContext'
 import { useClients } from '../hooks/useClients'
 import { usePremises } from '../hooks/usePremises'
 import { useQuote, useQuotes } from '../hooks/useQuotes'
@@ -32,6 +33,7 @@ export default function QuoteBuilder() {
   const { quote, client: loadedClient, premises: loadedPremises, loading } = useQuote(id)
   const { createQuote, updateQuote, sendQuote, respondToQuote } = useQuotes()
   const { currentDivision, available } = useDivision()
+  const { business } = useBusiness()
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [addPremisesOpen, setAddPremisesOpen] = useState(false)
 
@@ -62,6 +64,14 @@ export default function QuoteBuilder() {
     setVatRate(Number(quote.vat_rate ?? 0.20))
     setExpiresAt(quote.expires_at ? quote.expires_at.slice(0, 10) : '')
   }, [quote?.id])
+
+  // Seed VAT rate from business default for NEW quotes only.
+  // Existing quotes carry their own vat_rate (set above) so we don't
+  // retroactively rewrite an issued doc when HMRC moves the rate.
+  useEffect(() => {
+    if (!isNew || quote) return
+    if (business?.vat_rate != null) setVatRate(Number(business.vat_rate))
+  }, [isNew, quote, business?.vat_rate])
 
   const { premises: clientPremises, addPremises } = usePremises({
     clientId: clientId || undefined,

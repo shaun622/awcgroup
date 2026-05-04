@@ -63,6 +63,15 @@ export default function InvoiceBuilder() {
     setNotes(invoice.notes ?? '')
   }, [invoice?.id])
 
+  // Seed VAT rate from business default for NEW invoices only.
+  // Existing invoices carry their own vat_rate so we don't retroactively
+  // rewrite an issued doc when HMRC moves the rate. The ?from=quote:ID
+  // hydration below will override this with the source quote's rate.
+  useEffect(() => {
+    if (!isNew || invoice) return
+    if (business?.vat_rate != null) setVatRate(Number(business.vat_rate))
+  }, [isNew, invoice, business?.vat_rate])
+
   // Hydrate from ?from=job:ID or ?from=quote:ID (one-off on mount)
   useEffect(() => {
     if (!isNew || !business) return
