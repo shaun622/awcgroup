@@ -1,7 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, CalendarDays, Users, Briefcase, Receipt, FileText, Repeat, BarChart3, Settings } from 'lucide-react'
+import { Home, CalendarDays, Users, Briefcase, Receipt, FileText, BarChart3 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
+// Settings sits in the top header next to the theme toggle (see
+// Header.jsx), so the underline tabs stay focused on daily-use
+// destinations.
 const TABS = [
   { path: '/',          label: 'Home',      icon: Home },
   { path: '/schedule',  label: 'Schedule',  icon: CalendarDays },
@@ -10,7 +13,6 @@ const TABS = [
   { path: '/quotes',    label: 'Quotes',    icon: Receipt },
   { path: '/invoices',  label: 'Invoices',  icon: FileText },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { path: '/settings',  label: 'Settings',  icon: Settings },
 ]
 
 export default function DesktopNav() {

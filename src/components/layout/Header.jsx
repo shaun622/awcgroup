@@ -1,13 +1,16 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Search, Settings as SettingsIcon } from 'lucide-react'
 import DivisionSwitcher from './DivisionSwitcher'
 import ThemeToggle from './ThemeToggle'
 import Avatar from '../ui/Avatar'
 import { useAuth } from '../../contexts/AuthContext'
+import { cn } from '../../lib/utils'
 
 export default function Header({ title, backTo, right, onOpenCommand }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
+  const onSettings = location.pathname.startsWith('/settings')
 
   return (
     <header
@@ -58,10 +61,21 @@ export default function Header({ title, backTo, right, onOpenCommand }) {
           <div className="hidden sm:block">
             <ThemeToggle compact />
           </div>
+          <Link
+            to="/settings"
+            title="Settings"
+            aria-label="Settings"
+            className={cn(
+              'min-h-tap min-w-tap w-9 h-9 rounded-xl flex items-center justify-center transition-colors',
+              onSettings
+                ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800',
+            )}
+          >
+            <SettingsIcon className="w-5 h-5" strokeWidth={2} />
+          </Link>
           {user && (
-            <Link to="/settings" className="ml-1" aria-label="Settings">
-              <Avatar name={user.email ?? 'User'} size="sm" />
-            </Link>
+            <Avatar name={user.email ?? 'User'} size="sm" className="ml-1" />
           )}
         </div>
       </div>
