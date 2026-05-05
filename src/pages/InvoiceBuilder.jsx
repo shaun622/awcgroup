@@ -218,23 +218,34 @@ export default function InvoiceBuilder() {
       </div>
 
       <div className="grid gap-3 mb-4 md:grid-cols-2">
-        <Select
-          label="Client"
-          value={clientId}
-          onChange={e => {
-            if (e.target.value === ADD_SENTINEL) { setAddClientOpen(true); return }
-            setClientId(e.target.value)
-          }}
-          disabled={readOnly || !isNew}
-          required
-        >
-          <option value="">— Pick a client —</option>
-          {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          {!readOnly && isNew && (<>
-            <option disabled>──────────</option>
-            <option value={ADD_SENTINEL}>+ Add new client…</option>
-          </>)}
-        </Select>
+        {/* Client picker + visible "+ New" button. The button used to
+            be a synthetic dropdown option ("+ Add new client…") which
+            worked but required opening the dropdown to find. Lifting
+            it out into a real button alongside the picker matches the
+            ProLine pattern and is much more discoverable. */}
+        <div className="flex items-end gap-2">
+          <div className="flex-1 min-w-0">
+            <Select
+              label="Client"
+              value={clientId}
+              onChange={e => setClientId(e.target.value)}
+              disabled={readOnly || !isNew}
+              required
+            >
+              <option value="">— Pick a client —</option>
+              {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+          </div>
+          {!readOnly && isNew && (
+            <button
+              type="button"
+              onClick={() => setAddClientOpen(true)}
+              className="min-h-[44px] px-3 rounded-xl border border-dashed border-brand-300 dark:border-brand-700/60 text-brand-600 dark:text-brand-400 text-sm font-semibold hover:bg-brand-50 dark:hover:bg-brand-950/40 transition-colors whitespace-nowrap shrink-0"
+            >
+              + New
+            </button>
+          )}
+        </div>
 
         <Input label="Issue date" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} disabled={readOnly} />
         <Input label="Due date" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} disabled={readOnly} />
