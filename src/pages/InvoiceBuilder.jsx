@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Plus, Trash2, Send, CheckCircle2, Receipt,
+  Mail, MapPin, Phone, User,
 } from 'lucide-react'
 import PageWrapper from '../components/layout/PageWrapper'
 import Card from '../components/ui/Card'
@@ -244,6 +245,47 @@ export default function InvoiceBuilder() {
           </div>
         )}
       </div>
+
+      {/* Bill to — auto-populated client details once a client is
+          picked, so the operator can sanity-check the invoice is
+          going to the right client without bouncing to ClientDetail.
+          Address is the UK 4-part composite (line 1 / line 2 / city
+          / postcode), filtered + comma-joined. Missing fields render
+          as a grey em-dash so the card stays a stable height. */}
+      {(() => {
+        const sc = allClients.find(c => c.id === clientId)
+        if (!sc) return null
+        const address = [sc.address_line_1, sc.address_line_2, sc.city, sc.postcode].filter(Boolean).join(', ')
+        return (
+          <Card className="mb-4 !p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Bill to</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2.5">
+                <User className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" strokeWidth={2} />
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{sc.name}</span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" strokeWidth={2} />
+                {sc.phone
+                  ? <span className="text-gray-700 dark:text-gray-300">{sc.phone}</span>
+                  : <span className="text-gray-400 dark:text-gray-500">—</span>}
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" strokeWidth={2} />
+                {sc.email
+                  ? <span className="text-gray-700 dark:text-gray-300 break-all">{sc.email}</span>
+                  : <span className="text-gray-400 dark:text-gray-500">—</span>}
+              </div>
+              <div className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" strokeWidth={2} />
+                {address
+                  ? <span className="text-gray-700 dark:text-gray-300">{address}</span>
+                  : <span className="text-gray-400 dark:text-gray-500">—</span>}
+              </div>
+            </div>
+          </Card>
+        )
+      })()}
 
       {/* Line items */}
       <Card className="mb-4 !p-4">
